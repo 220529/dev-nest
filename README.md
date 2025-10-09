@@ -1,98 +1,95 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Dev Nest - NestJS 中转服务
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+简单的中转服务API，提供基于 Swagger 的 API 文档。
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 功能特点
 
-## Description
+- ✅ **模块化架构**: 使用 NestJS 模块系统组织代码
+- ✅ **路径别名**: 支持 `@/` 前缀的路径别名导入
+- ✅ **Swagger 文档**: 自动生成 API 文档
+- ✅ **中转服务**: 实现 runFlow 数据转发功能
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 快速开始
 
-## Project setup
-
+### 安装依赖
 ```bash
-$ pnpm install
+pnpm install
 ```
 
-## Compile and run the project
-
+### 启动开发服务器
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+npm run start:dev
 ```
 
-## Run tests
+### 访问应用
+- 应用地址: http://localhost:9001
+- Swagger UI: http://localhost:9001/api
 
-```bash
-# unit tests
-$ pnpm run test
+## 项目结构
 
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+```
+src/
+├── modules/           # 功能模块
+│   ├── api/          # API模块
+│   │   ├── api.controller.ts
+│   │   ├── api.service.ts
+│   │   ├── api.module.ts
+│   │   └── index.ts
+│   └── index.ts
+├── app.controller.ts  # 主控制器
+├── app.service.ts     # 主服务
+├── app.module.ts      # 主模块
+└── main.ts           # 应用入口
 ```
 
-## Deployment
+## 路径别名配置
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+项目支持以下路径别名:
+- `@/*` → `src/*`
+- `@/modules/*` → `src/modules/*`
+- `@/common/*` → `src/common/*`
+- `@/config/*` → `src/config/*`
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## API 接口
 
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+### POST /api/runFlow
+中转服务接口，读取文件数据并转发到目标API。
+
+**请求参数:**
+```json
+{
+  "dataPath": "文件路径",
+  "hostPre": "目标主机前缀",
+  "host": "目标主机"
+}
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+**响应示例:**
+```json
+{
+  "success": true,
+  "data": "目标API返回的数据"
+}
+```
 
-## Resources
+## 开发命令
 
-Check out a few resources that may come in handy when working with NestJS:
+```bash
+# 开发模式
+npm run start:dev
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+# 构建
+npm run build
 
-## Support
+# 生产模式
+npm run start:prod
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+# 测试
+npm run test
 
-## Stay in touch
+# 代码格式化
+npm run format
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+# 代码检查
+npm run lint
+```
