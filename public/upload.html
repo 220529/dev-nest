@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel数据解析</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-select, .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .form-select:focus, .form-input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            background: #fafafa;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        
+        .upload-area:hover {
+            border-color: #007bff;
+            background: #f0f8ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #007bff;
+            background: #e3f2fd;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .stats {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+            display: none;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 20px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .section {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .code-area {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Excel数据解析</h1>
+            <p>上传Excel文件，解析数据并调用runFlow接口</p>
+        </div>
+        
+        <!-- 数据类型选择 -->
+        <div class="form-group">
+            <label for="mappingType">数据类型</label>
+            <select id="mappingType" class="form-select">
+                <option value="materials" selected>材料表</option>
+            </select>
+        </div>
+        
+        <!-- 文件上传 -->
+        <div class="upload-area" id="uploadArea">
+            <div style="font-size: 48px; margin-bottom: 15px;">📊</div>
+            <p>拖拽Excel文件到这里，或点击选择文件</p>
+            <button class="btn btn-primary" style="margin-top: 15px;" onclick="document.getElementById('fileInput').click()">
+                选择文件
+            </button>
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="handleFileSelect(this.files[0])">
+            <p style="margin-top: 10px; font-size: 12px; color: #666;">
+                支持 .xlsx, .xls, .csv 格式，最大 10MB
+            </p>
+        </div>
+        
+        <!-- 加载状态 -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>正在处理...</div>
+        </div>
+        
+        <!-- 解析结果 -->
+        <div class="result" id="result"></div>
+        
+        <!-- 统计信息 -->
+        <div class="stats" id="stats">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number" id="originalTotal">0</div>
+                    <div class="stat-label">原始行数</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="validData">0</div>
+                    <div class="stat-label">有效数据</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="filterRate">0%</div>
+                    <div class="stat-label">过滤率</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- runFlow调用 -->
+        <div class="section" id="runFlowSection">
+            <h4>🚀 调用runFlow接口</h4>
+            <div class="form-group">
+                <label for="action">Action</label>
+                <input type="text" id="action" class="form-input" value="materials_excel" placeholder="例如: materials_excel">
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="testMode" style="margin-right: 8px;">
+                    测试模式
+                </label>
+                <div id="testLimitGroup" style="margin-top: 10px; display: none;">
+                    <label for="testLimit">测试数据量</label>
+                    <input type="number" id="testLimit" class="form-input" value="1000" min="1" max="50000" placeholder="请输入测试条数">
+                    <p style="margin-top: 5px; font-size: 12px; color: #666;">
+                        只处理前N条数据，适合测试验证（默认1000条）
+                    </p>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="batchSize">批次大小</label>
+                <select id="batchSize" class="form-select">
+                    <option value="100">100条/批 (适合小数据)</option>
+                    <option value="200" selected>200条/批 (推荐)</option>
+                    <option value="500">500条/批 (适合大数据)</option>
+                    <option value="1000">1000条/批 (快速处理)</option>
+                </select>
+                <p style="margin-top: 5px; font-size: 12px; color: #666;">
+                    💡 批次越大处理越快，但单批失败影响更多数据
+                </p>
+            </div>
+            <button class="btn btn-success" onclick="callRunFlow()" id="runFlowBtn">
+                调用接口
+            </button>
+            
+            <div class="result" id="runFlowResult"></div>
+        </div>
+        
+        <!-- 数据预览 -->
+        <div class="section" id="dataPreview">
+            <h4>📝 数据预览</h4>
+            <div class="code-area" id="previewArea"></div>
+        </div>
+        
+        <!-- 重新开始 -->
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="btn btn-primary" onclick="resetProcess()" id="resetBtn" style="display: none;">
+                重新开始
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        let currentJsonPath = null;
+        
+        // 页面加载时获取映射类型
+        document.addEventListener('DOMContentLoaded', function() {
+            loadMappingTypes();
+            
+            // 添加测试模式开关事件监听
+            document.getElementById('testMode').addEventListener('change', function() {
+                const testLimitGroup = document.getElementById('testLimitGroup');
+                testLimitGroup.style.display = this.checked ? 'block' : 'none';
+            });
+        });
+        
+        async function loadMappingTypes() {
+            try {
+                const response = await fetch('/api/excel/mappings');
+                const result = await response.json();
+                
+                if (result.success && result.mappings) {
+                    const select = document.getElementById('mappingType');
+                    // 清空现有选项
+                    select.innerHTML = '';
+                    
+                    // 添加映射类型选项，默认选中材料表
+                    result.mappings.forEach(mappingName => {
+                        const mappingDetail = result.details[mappingName];
+                        const option = document.createElement('option');
+                        option.value = mappingName;
+                        option.textContent = `${mappingDetail.displayName} (${mappingName})`;
+                        
+                        // 默认选中材料表
+                        if (mappingName === 'materials') {
+                            option.selected = true;
+                        }
+                        
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('加载映射类型失败:', error);
+            }
+        }
+        
+        // 拖拽功能
+        const uploadArea = document.getElementById('uploadArea');
+        
+        ['dragover', 'dragenter'].forEach(event => {
+            uploadArea.addEventListener(event, (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+        });
+        
+        ['dragleave', 'drop'].forEach(event => {
+            uploadArea.addEventListener(event, (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+            });
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+        
+        // 文件选择处理
+        function handleFileSelect(file) {
+            if (!file) return;
+            
+            if (file.size > 10 * 1024 * 1024) {
+                showResult('error', '文件大小不能超过 10MB');
+                return;
+            }
+            
+            selectedFile = file;
+            
+            uploadArea.innerHTML = `
+                <div style="font-size: 48px; margin-bottom: 15px;">✅</div>
+                <p><strong>${file.name}</strong></p>
+                <p style="color: #666; font-size: 14px;">大小: ${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                <button class="btn btn-primary" style="margin-top: 15px;" onclick="document.getElementById('fileInput').click()">重新选择</button>
+            `;
+            
+            startParsing();
+        }
+        
+        // 开始解析
+        async function startParsing() {
+            if (!selectedFile) return;
+            
+            showLoading(true);
+            hideResults();
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                
+                // 获取选中的映射类型
+                const selectedMappingType = document.getElementById('mappingType').value;
+                formData.append('mappingType', selectedMappingType);
+                
+                const response = await fetch('/api/excel/parse', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                showLoading(false);
+                
+                if (result.success) {
+                    showParseResult(result);
+                } else {
+                    showResult('error', `解析失败: ${result.message}`);
+                }
+                
+            } catch (error) {
+                showLoading(false);
+                showResult('error', `解析错误: ${error.message}`);
+            }
+        }
+        
+        // 显示解析结果
+        function showParseResult(result) {
+            currentJsonPath = result.jsonPath;
+            
+            // 更新统计
+            document.getElementById('originalTotal').textContent = result.originalTotal || 0;
+            document.getElementById('validData').textContent = result.total || 0;
+            document.getElementById('filterRate').textContent = (result.filterRate || 0) + '%';
+            
+            document.getElementById('stats').style.display = 'block';
+            
+            // 显示结果
+            const message = `✅ 解析成功！处理了 ${result.total} 条有效数据`;
+            showResult('success', message);
+            
+            // 显示数据预览
+            if (result.data && result.data.length > 0) {
+                const previewData = result.data.slice(0, 3);
+                document.getElementById('previewArea').textContent = JSON.stringify(previewData, null, 2);
+                document.getElementById('dataPreview').style.display = 'block';
+                
+                // 显示runFlow区域
+                document.getElementById('runFlowSection').style.display = 'block';
+            }
+            
+            document.getElementById('resetBtn').style.display = 'inline-block';
+        }
+        
+        // 调用runFlow
+        async function callRunFlow() {
+            if (!currentJsonPath) {
+                showRunFlowResult('error', '请先解析Excel文件');
+                return;
+            }
+            
+            const action = document.getElementById('action').value.trim();
+            const batchSize = parseInt(document.getElementById('batchSize').value);
+            const testMode = document.getElementById('testMode').checked;
+            const testLimit = testMode ? (parseInt(document.getElementById('testLimit').value) || 1000) : 0;
+            
+            if (!action) {
+                showRunFlowResult('error', '请填写Action参数');
+                return;
+            }
+            
+            if (testMode) {
+                if (isNaN(testLimit) || testLimit < 1 || testLimit > 50000) {
+                    showRunFlowResult('error', '测试模式下，测试数据量应在1-50000之间，如果未填写则默认使用1000条');
+                    return;
+                }
+            }
+            
+            const btn = document.getElementById('runFlowBtn');
+            btn.disabled = true;
+            btn.textContent = '批量处理中...';
+            
+            try {
+                // 时间估算提示
+                let dataCount = parseInt(document.getElementById('validData').textContent) || 0;
+                if (testMode) {
+                    dataCount = Math.min(dataCount, testLimit);
+                }
+                const batchCount = Math.ceil(dataCount / batchSize);
+                const estimatedMinutes = Math.ceil(batchCount * 2 / 60); // 假设每批2秒
+                
+                if (estimatedMinutes > 10) {
+                    const confirmMsg = `⚠️ 预计处理时间: ${estimatedMinutes}分钟\n` +
+                                     `数据量: ${dataCount}条，分${batchCount}批处理\n\n` +
+                                     `建议：\n` +
+                                     `• 大量数据建议先使用测试模式验证\n` +
+                                     `• 可以调大批次大小加速处理\n\n` +
+                                     `确定要继续吗？`;
+                    
+                    if (!confirm(confirmMsg)) {
+                        btn.disabled = false;
+                        btn.textContent = '调用接口';
+                        return;
+                    }
+                }
+                
+                // 开始实际的API调用 (30分钟超时)
+                const timeoutId = setTimeout(() => {
+                    throw new Error('请求超时：处理时间过长，建议使用测试模式先验证');
+                }, 30 * 60 * 1000); // 30分钟超时
+                
+                const response = await fetch('/api/excel/runflow', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        dataPath: currentJsonPath,
+                        action: action,
+                        batchSize: batchSize,
+                        testMode: testMode,
+                        testLimit: testLimit  // 使用用户输入的测试数据量
+                    })
+                });
+                
+                clearTimeout(timeoutId); // 清除超时定时器
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const actualLimit = testMode ? (testLimit || 1000) : null;
+                    const testModeText = testMode ? `\n🧪 测试模式: 已启用，只处理前${actualLimit}条数据` : '';
+                    showRunFlowResult('success', `✅ 批量处理完成！${testModeText}
+                    
+📊 处理结果:
+- 总数据: ${result.totalCount} 条  
+- 成功处理: ${result.processedCount} 条
+- 失败数据: ${result.errorCount} 条
+- 分批数量: ${result.batchCount} 批
+- 批次大小: ${batchSize} 条/批
+
+处理状态: ${result.errorCount === 0 ? '全部成功' : '部分失败'}`);
+                } else {
+                    showRunFlowResult('error', `批量处理失败: ${result.message}`);
+                }
+                
+            } catch (error) {
+                showRunFlowResult('error', `调用错误: ${error.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '调用接口';
+            }
+        }
+        
+        // 工具函数
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+        
+        function showResult(type, message) {
+            const result = document.getElementById('result');
+            result.className = `result ${type}`;
+            result.textContent = message;
+            result.style.display = 'block';
+        }
+        
+        function showRunFlowResult(type, message) {
+            const result = document.getElementById('runFlowResult');
+            result.className = `result ${type}`;
+            result.textContent = message;
+            result.style.display = 'block';
+        }
+        
+        function hideResults() {
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('stats').style.display = 'none';
+            document.getElementById('dataPreview').style.display = 'none';
+            document.getElementById('runFlowSection').style.display = 'none';
+            document.getElementById('resetBtn').style.display = 'none';
+        }
+        
+        function resetProcess() {
+            selectedFile = null;
+            currentJsonPath = null;
+            
+            document.getElementById('uploadArea').innerHTML = `
+                <div style="font-size: 48px; margin-bottom: 15px;">📊</div>
+                <p>拖拽Excel文件到这里，或点击选择文件</p>
+                <button class="btn btn-primary" style="margin-top: 15px;" onclick="document.getElementById('fileInput').click()">选择文件</button>
+                <p style="margin-top: 10px; font-size: 12px; color: #666;">支持 .xlsx, .xls, .csv 格式，最大 10MB</p>
+            `;
+            
+            document.getElementById('mappingType').value = 'materials';  // 重置为默认材料表
+            document.getElementById('action').value = 'materials_excel';
+            document.getElementById('batchSize').value = '200';  // 重置为默认批次大小
+            document.getElementById('testMode').checked = false;  // 重置测试模式开关
+            document.getElementById('testLimit').value = '1000';  // 重置测试条数
+            document.getElementById('testLimitGroup').style.display = 'none';  // 隐藏测试条数输入框
+            
+            hideResults();
+            showLoading(false);
+        }
+    </script>
+</body>
+</html>

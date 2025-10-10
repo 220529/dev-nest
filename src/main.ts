@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '@/app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { getCurrentEnv, getAuthConfig } from '@/config/auth.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -15,8 +16,12 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
   
-  await app.listen(process.env.PORT ?? 9001);
-  console.log(`Application is running on: http://localhost:${process.env.PORT ?? 9001}`);
-  console.log(`Swagger UI is available at: http://localhost:${process.env.PORT ?? 9001}/api`);
+  const port = process.env.PORT ?? 9001;
+  await app.listen(port);
+  
+  // 显示关键环境信息
+  const currentEnv = getCurrentEnv();
+  const authConfig = getAuthConfig();
+  console.log(`🌍 环境: ${currentEnv.toUpperCase()} | ERP: ${authConfig.baseUrl} | 上传: http://localhost:${port}/upload`);
 }
 bootstrap();
