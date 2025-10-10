@@ -3,8 +3,8 @@ import * as XLSX from 'xlsx';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { RunFlowDto, ExcelParseResult, BatchProcessResult } from './dto/excel.dto';
-import mappingLoader from '../../schemas/mapping-loader';
-import { ErpService } from '../erp';
+import * as materialsMapping from '../../schemas/materials.mapping';
+import { ErpService } from '../erp/erp.service';
 
 @Injectable()
 export class ExcelService {
@@ -135,22 +135,17 @@ export class ExcelService {
    */
   getMappingTypes(): { success: boolean; mappings: string[]; details: any } {
     try {
-      const availableMappings = mappingLoader.getAvailableMappings();
-      const mappingDetails = {};
-      
-      // 获取每个映射的详细信息
-      availableMappings.forEach(mappingName => {
-        const mapping = mappingLoader.getMapping(mappingName);
-        mappingDetails[mappingName] = {
-          displayName: mapping.displayName || mappingName,
-          tableName: mapping.tableName || mappingName,
-          supportedFields: Object.keys(mapping.fieldMapping || {})
-        };
-      });
+      const mappingDetails = {
+        'materials': {
+          displayName: '材料表',
+          tableName: 'materials',
+          supportedFields: Object.keys(materialsMapping.fieldMapping)
+        }
+      };
       
       return {
         success: true,
-        mappings: availableMappings,
+        mappings: materialsMapping.availableMappings,
         details: mappingDetails
       };
     } catch (error) {
@@ -163,23 +158,26 @@ export class ExcelService {
    * 通用数据处理方法：映射 + 过滤
    */
   private processExcelData(headers: string[], rows: any[][], mappingType: string): any[] {
-    const mappingConfig = mappingLoader.getMapping(mappingType);
+    // 目前只支持materials映射
+    if (mappingType !== 'materials') {
+      throw new BadRequestException(`不支持的映射类型: ${mappingType}`);
+    }
     
     // 映射数据
     const rawMappedData = rows.map((row) => {
       const rowData = {};
       headers.forEach((header, colIndex) => {
-        const dbField = mappingConfig.fieldMapping[header];
+        const dbField = materialsMapping.fieldMapping[header];
         if (dbField) {
           const rawValue = row[colIndex];
-          rowData[dbField] = mappingConfig.convertValue(rawValue, dbField);
+          rowData[dbField] = materialsMapping.convertValue(rawValue, dbField);
         }
       });
       return rowData;
     });
 
     // 使用配置化的过滤方法
-    return mappingConfig.filterData(rawMappedData);
+    return materialsMapping.filterData(rawMappedData);
   }
 
   /**

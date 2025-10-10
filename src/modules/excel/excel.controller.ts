@@ -67,3 +67,4 @@ export class ExcelController {
     return this.excelService.getMappingTypes();
   }
 }
+

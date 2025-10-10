@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { erpConfig } from '../../config/erp.config';
+import { erpConfig } from './erp.config';
 
 export interface ErpApiParams {
   flowId?: string;
@@ -217,6 +217,45 @@ export class ErpService {
       
     } catch (error) {
       throw error;
+    }
+  }
+
+  /**
+   * 转发服务 - 处理原始runFlow请求转发
+   * @param params 包含dataPath等参数的请求体
+   * @returns 转发结果
+   */
+  async forwardRunFlow(params: any): Promise<any> {
+    const fs = require('fs');
+    
+    try {
+      // 读取数据文件
+      const jsData = fs.readFileSync(params.dataPath, 'utf8');
+      
+      // 构造请求数据
+      const data = { ...params, data: jsData };
+      
+      this.logger.log(`转发请求到: ${data.hostPre}/api/open/runFlow`);
+      
+      // 调用外部API
+      return await this.callOpenRunFlow(data);
+      
+    } catch (error) {
+      this.logger.error('转发请求失败:', error.message);
+      
+      if (error.code === 'ENOENT') {
+        return { error: 'Data file not found' };
+      }
+      
+      if (error.response) {
+        return { 
+          error: 'Target API error', 
+          statusCode: error.response.status, 
+          message: error.response.data 
+        };
+      }
+      
+      return { error: 'Failed to fetch data: ' + error.message };
     }
   }
 

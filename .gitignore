@@ -54,3 +54,14 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# 应用数据文件
+/data
+/uploads
+*.xlsx
+*.xls
+*.csv
+
+# 构建产物
+/dist
+*.tsbuildinfo

@@ -9,15 +9,6 @@ export class RunFlowDto {
   testMode?: boolean = false;
   testLimit?: number = 1000;
   flowId?: string = 'z244yolix5cg9meb';
-  hostPre?: string;
-  host?: string;
-}
-
-export class BatchProcessDto {
-  data: any[];
-  batchSize?: number = 200;
-  action?: string = 'materials_excel';
-  flowId?: string = 'z244yolix5cg9meb';
 }
 
 export interface ExcelParseResult {

@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { ExcelController } from './excel.controller';
 import { ExcelService } from './excel.service';
-import { ErpModule } from '../erp';
+import { ErpModule } from '../erp/erp.module';
 
 @Module({
   imports: [HttpModule, ErpModule],

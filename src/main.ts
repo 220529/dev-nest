@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '@/app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { getCurrentEnv, getAuthConfig } from '@/config/auth.config';
+import { getCurrentEnv, erpConfig } from '@/modules/erp/erp.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -21,7 +21,6 @@ async function bootstrap() {
   
   // 显示关键环境信息
   const currentEnv = getCurrentEnv();
-  const authConfig = getAuthConfig();
-  console.log(`🌍 环境: ${currentEnv.toUpperCase()} | ERP: ${authConfig.baseUrl} | 上传: http://localhost:${port}/upload`);
+  console.log(`🌍 环境: ${currentEnv.toUpperCase()} | ERP: ${erpConfig.baseUrl} | http://localhost:${port}`);
 }
 bootstrap();
