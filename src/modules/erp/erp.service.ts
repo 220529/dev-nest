@@ -53,6 +53,8 @@ export class ErpService {
         })
       );
       
+      // 打印API调用成功的返回结果
+      this.logger.log(`ERP API调用成功: ${JSON.stringify(response.data)}`);
       return response.data;
       
     } catch (error) {
@@ -126,7 +128,7 @@ export class ErpService {
 
     this.logger.log(`批量处理完成: 成功${successCount}条，失败${errorCount}条`);
 
-    return {
+    const finalResult = {
       success: errorCount === 0,
       totalCount,
       successCount,
@@ -134,6 +136,18 @@ export class ErpService {
       batchCount,
       results
     };
+
+    // 打印批量处理的最终结果
+    this.logger.log(`批量处理最终结果: ${JSON.stringify({
+      success: finalResult.success,
+      totalCount: finalResult.totalCount,
+      successCount: finalResult.successCount,
+      errorCount: finalResult.errorCount,
+      batchCount: finalResult.batchCount,
+      message: `批量处理完成: 成功${successCount}条，失败${errorCount}条，共${batchCount}批`
+    })}`);
+
+    return finalResult;
   }
 
   /**
@@ -163,6 +177,13 @@ export class ErpService {
         };
 
         const result = await this.callRunFlow(params);
+        
+        // 打印单批次处理结果
+        this.logger.log(`第${currentBatch}批处理结果: ${JSON.stringify({
+          success: true,
+          dataCount: batchData.length,
+          result: result
+        })}`);
         
         return {
           batchIndex: currentBatch,
@@ -213,6 +234,8 @@ export class ErpService {
         })
       );
       
+      // 打印开放API调用成功的返回结果  
+      this.logger.log(`开放API调用成功: ${JSON.stringify(response.data)}`);
       return response.data;
       
     } catch (error) {
@@ -238,7 +261,12 @@ export class ErpService {
       this.logger.log(`转发请求到: ${data.hostPre}/api/open/runFlow`);
       
       // 调用外部API
-      return await this.callOpenRunFlow(data);
+      const result = await this.callOpenRunFlow(data);
+      
+      // 打印转发结果
+      this.logger.log(`转发请求成功: ${JSON.stringify(result)}`);
+      
+      return result;
       
     } catch (error) {
       this.logger.error('转发请求失败:', error.message);

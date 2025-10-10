@@ -30,18 +30,42 @@ pnpm start:dev
 
 ## 🔧 配置说明
 
-### ERP环境配置
-编辑 `src/modules/erp/erp.config.ts`:
+### 环境变量配置
 
-```typescript
-// 切换环境: 'dev' | 'prod'
-const CURRENT_ENV = 'prod';
+**三层配置结构**：
+- `.env` - 基础共用配置（已提交）
+- `.env.dev` - 开发环境敏感配置（需创建）  
+- `.env.prod` - 生产环境敏感配置（需创建）
 
-// 更新对应环境的JWT token
-const prodConfig = {
-  baseUrl: 'https://erp.tone.top',
-  authorization: 'Bearer YOUR_JWT_TOKEN'
-};
+1. **基础配置**（`.env`，已存在）:
+```bash
+ERP_RUN_FLOW_PATH=/api/runFlow
+ERP_OPEN_RUN_FLOW_PATH=/api/open/runFlow
+ERP_TIMEOUT=100000
+ERP_APP_VERSION=v1.1.96
+PORT=9001
+```
+
+2. **创建环境配置**：
+```bash
+# .env.dev (开发环境)
+NODE_ENV=development
+ERP_BASE_URL=https://your-dev-erp.example.com
+ERP_AUTHORIZATION=Bearer your_dev_jwt_token
+
+# .env.prod (生产环境)  
+NODE_ENV=production
+ERP_BASE_URL=https://your-prod-erp.example.com
+ERP_AUTHORIZATION=Bearer your_prod_jwt_token
+```
+
+### 运行命令
+```bash
+# 开发环境
+pnpm dev
+
+# 生产环境
+pnpm prod
 ```
 
 ### 数据映射配置

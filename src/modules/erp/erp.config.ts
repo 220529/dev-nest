@@ -1,53 +1,45 @@
 /**
- * 应用配置文件
+ * ERP服务配置
+ * 使用环境变量管理敏感信息
  * 
- * 使用方法：
- * 1. 根据需要切换 CURRENT_ENV ('dev' | 'prod')
- * 2. 将对应环境的JWT token粘贴到 authorization 字段
+ * 使用方法:
+ * 1. 创建 .env.dev 或 .env.prod 文件
+ * 2. 运行对应的npm脚本: pnpm dev 或 pnpm prod
  */
 
-// 当前使用的环境 - 手动切换
-const CURRENT_ENV = 'dev'; // 'dev' | 'prod'
-
-// 开发环境配置
-const devConfig = {
-  baseUrl: 'https://erp.tintan.net',
-  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTI5MSwibmFtZSI6IuWImOWHr-asoyIsIm1vYmlsZSI6ImxreCIsImlzQWN0aXZlIjp0cnVlLCJzdXBwbGllcklkIjpudWxsLCJjb21wYW55SWQiOjAsImRlcGFydG1lbnRJZCI6IjAiLCJyb2xlcyI6IjEiLCJjdXJSb2xlIjoxLCJ3eHVzZXJpZCI6IiIsImF1dG9Mb2dpbiI6ZmFsc2UsInBvc2l0aW9uIjoiIiwicHdkVmVyc2lvbiI6MiwibG9naW5SZXF1ZXN0SWQiOiIxNzhjOWNkZC1hOWU3LTRlMjctYjNkNi0wY2Q2MGMxM2I3YzUiLCJpYXQiOjE3NTk5ODYxNDksImV4cCI6MTc2MDU5MDk0OX0.P-aBVAmUiPE4u3oQivN3Y-nDVv8-js7NFi4AIjp8NFA'
-};
-
-// 生产环境配置
-const prodConfig = {
-  baseUrl: 'https://erp.tone.top',
-  authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NDYzMCwibmFtZSI6IuWImOWHr-asoyIsIm1vYmlsZSI6ImxreCIsImlzQWN0aXZlIjp0cnVlLCJzdXBwbGllcklkIjpudWxsLCJjb21wYW55SWQiOjAsImRlcGFydG1lbnRJZCI6IjAiLCJyb2xlcyI6IjEiLCJjdXJSb2xlIjoxLCJ3eHVzZXJpZCI6bnVsbCwiYXV0b0xvZ2luIjpmYWxzZSwicG9zaXRpb24iOiIiLCJwd2RWZXJzaW9uIjoyLCJsb2dpblRva2VuVHlwZSI6Ind4IiwibG9naW5SZXF1ZXN0SWQiOiJhOTE2MzlhOS0yNTFmLTRkOGEtYjA5Mi03M2IxZWU1YmEzZTkiLCJpYXQiOjE3NjAwNjAzODcsImV4cCI6MTc2MDY2NTE4N30.2o4Lr7Txmut9VajY8iADht7mk3gWEVdE0-X4P-5IQ_o'
-};
-
-// 环境配置映射
-const envConfigs = {
-  dev: devConfig,
-  prod: prodConfig
-};
-
-// 获取当前环境配置
-const getEnvConfig = () => {
-  const config = envConfigs[CURRENT_ENV];
-  if (!config) {
-    throw new Error(`未知的环境配置: ${CURRENT_ENV}`);
+// 获取必需的环境变量，无默认值
+const getRequiredEnv = (key: string): string => {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`环境变量 ${key} 未设置，请在环境文件中配置`);
   }
-  return config;
+  return value;
 };
 
-// ERP服务配置
+// ERP服务配置 - 完全从环境变量读取，无默认值
 export const erpConfig = {
-  // 环境配置
-  env: CURRENT_ENV,
-  ...getEnvConfig(),
-  
-  // ERP API 配置
-  runFlowPath: '/api/runFlow',
-  openRunFlowPath: '/api/open/runFlow',
-  timeout: 100000, // 单次API调用超时(100秒)
-  appVersion: 'v1.1.96'
+  baseUrl: getRequiredEnv('ERP_BASE_URL'),
+  authorization: getRequiredEnv('ERP_AUTHORIZATION'),
+  runFlowPath: getRequiredEnv('ERP_RUN_FLOW_PATH'),
+  openRunFlowPath: getRequiredEnv('ERP_OPEN_RUN_FLOW_PATH'),
+  timeout: Number(getRequiredEnv('ERP_TIMEOUT')),
+  appVersion: getRequiredEnv('ERP_APP_VERSION')
 };
 
-// 导出便捷方法
-export const getCurrentEnv = () => CURRENT_ENV;
+// 导出当前环境信息
+export const getCurrentEnv = () => process.env.NODE_ENV || 'development';
+
+// 验证配置（在模块加载时自动验证）
+export const validateConfig = () => {
+  // 配置在导出时已经通过 getRequiredEnv 验证
+  // 此函数保持兼容性，实际验证在 erpConfig 初始化时完成
+  return true;
+};
+
+// 显示当前配置（隐藏敏感信息）
+export const getConfigSummary = () => ({
+  environment: getCurrentEnv(),
+  baseUrl: erpConfig.baseUrl,
+  appVersion: erpConfig.appVersion,
+  hasAuthorization: !!erpConfig.authorization
+});
