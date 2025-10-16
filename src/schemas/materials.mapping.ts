@@ -34,7 +34,8 @@ export const validationRules = {
   // 必填字段：这些字段不能为空，否则整行数据无效
   requiredFields: ['number'],
   // 数值字段不能为0：这些字段不能为0，否则整行数据无效（空值已转换为0）
-  nonZeroFields: ['purchasePrice', 'taxRate', 'untaxedPurchasePrice'],
+  nonZeroFields: ['taxRate'],
+  // nonZeroFields: ['purchasePrice', 'taxRate', 'untaxedPurchasePrice'],
   // nonZeroFields: ['purchasePrice', 'untaxedPurchasePrice'],
   // 可选：数字字段不能为负数的配置（未来扩展用）
   // nonNegativeFields: ['purchasePrice', 'untaxedPurchasePrice'],
