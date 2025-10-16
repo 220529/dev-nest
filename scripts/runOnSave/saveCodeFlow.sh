@@ -123,7 +123,7 @@ flowInfo=$(jq -n --arg flowId "$flow_id" --arg flowKey "$flow_key" --arg flowNam
 json=$(jq -n --arg runFlowId "$id" --arg saveType "$saveType" --arg accessKey "$accessKey" --arg accessSecret "$accessSecret" --arg flowInfo "$flowInfo" --arg hostPre "$hostPre" --arg host "$host" --arg dataPath "$dataPath" '{flowId: $runFlowId, saveType: $saveType, accessKey: $accessKey,accessSecret: $accessSecret, flowInfo: $flowInfo ,hostPre: $hostPre ,host:$host,dataPath:$dataPath}')
 
 # 使用curl发送POST请求
-result=$(curl --location --request POST "http://127.0.0.1:9001/api/runFlow" \
+result=$(curl --location --request POST "http://127.0.0.1:9009/api/runFlow" \
 --header 'Content-Type: application/json; charset=utf-8' \
 --header 'Accept: */*' \
 --header "Host: $host" \

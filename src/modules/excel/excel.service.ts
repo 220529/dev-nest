@@ -176,8 +176,16 @@ export class ExcelService {
       return rowData;
     });
 
-    // 使用配置化的过滤方法
-    return materialsMapping.filterData(rawMappedData);
+    // 使用配置化的过滤方法，静静过滤掉无效数据
+    const validData = materialsMapping.filterData(rawMappedData);
+    
+    // 简单记录过滤结果
+    if (rawMappedData.length > validData.length) {
+      const filteredCount = rawMappedData.length - validData.length;
+      this.logger.log(`数据过滤完成: ${validData.length}条有效数据，${filteredCount}条无效数据已过滤`);
+    }
+    
+    return validData;
   }
 
   /**

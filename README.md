@@ -24,9 +24,9 @@ pnpm start:dev
 ```
 
 ### 访问应用
-- 🌐 服务地址: http://localhost:9001
-- 📊 上传页面: http://localhost:9001/upload
-- 📚 API文档: http://localhost:9001/api
+- 🌐 服务地址: http://localhost:9009
+- 📊 上传页面: http://localhost:9009/upload
+- 📚 API文档: http://localhost:9009/api
 
 ## 🔧 配置说明
 
@@ -43,7 +43,7 @@ ERP_RUN_FLOW_PATH=/api/runFlow
 ERP_OPEN_RUN_FLOW_PATH=/api/open/runFlow
 ERP_TIMEOUT=100000
 ERP_APP_VERSION=v1.1.96
-PORT=9001
+PORT=9009
 ```
 
 2. **创建环境配置**：
@@ -112,7 +112,7 @@ src/
 ## 📝 使用示例
 
 ### 1. 上传Excel文件
-访问 http://localhost:9001/upload，选择Excel文件并设置参数。
+访问 http://localhost:9009/upload，选择Excel文件并设置参数。
 
 ### 2. 批量处理
 系统自动将数据分批（默认200条/批）调用ERP接口。

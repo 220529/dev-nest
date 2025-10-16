@@ -20,7 +20,7 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api', app, document);
     
-    const port = process.env.PORT ?? 9001;
+    const port = process.env.PORT ?? 9009;
     await app.listen(port);
     
     // 显示启动信息
