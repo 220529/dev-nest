@@ -17,8 +17,9 @@ export class ExcelService {
    */
   async parseExcel(
     file: Express.Multer.File,
-    mappingType: string = 'materials'
+    options: { mappingType?: string; sheetName?: string; sheetIndex?: number } = {}
   ): Promise<ExcelParseResult> {
+    const { mappingType = 'materials', sheetName, sheetIndex } = options;
     try {
       if (!file) {
         throw new BadRequestException('请上传Excel文件');
@@ -26,11 +27,37 @@ export class ExcelService {
 
       // 解析Excel
       const workbook = XLSX.readFile(file.path);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
+      
+      // 显示所有可用的Sheet
+      this.logger.log(`Excel包含 ${workbook.SheetNames.length} 个Sheet: ${JSON.stringify(workbook.SheetNames)}`);
+      
+      // 选择要读取的Sheet
+      let targetSheetName: string;
+      if (sheetName) {
+        // 通过名称选择
+        if (workbook.SheetNames.includes(sheetName)) {
+          targetSheetName = sheetName;
+        } else {
+          throw new BadRequestException(`指定的Sheet "${sheetName}" 不存在。可用的Sheet: ${workbook.SheetNames.join(', ')}`);
+        }
+      } else if (sheetIndex !== undefined) {
+        // 通过索引选择
+        if (sheetIndex >= 0 && sheetIndex < workbook.SheetNames.length) {
+          targetSheetName = workbook.SheetNames[sheetIndex];
+        } else {
+          throw new BadRequestException(`Sheet索引 ${sheetIndex} 超出范围。可用索引: 0-${workbook.SheetNames.length - 1}`);
+        }
+      } else {
+        // 默认选择第一个Sheet
+        targetSheetName = workbook.SheetNames[0];
+      }
+      
+      this.logger.log(`当前读取Sheet: "${targetSheetName}" (索引: ${workbook.SheetNames.indexOf(targetSheetName)})`);
+      
+      const worksheet = workbook.Sheets[targetSheetName];
       
       if (!worksheet) {
-        throw new BadRequestException('Excel文件为空');
+        throw new BadRequestException('选择的Sheet为空');
       }
 
       // 转换为JSON数组
@@ -43,8 +70,12 @@ export class ExcelService {
       const headers = jsonData[0] as string[];
       const rows = jsonData.slice(1) as any[][];
 
+      // 调试：打印Excel列标题
+      this.logger.log(`Excel列标题: ${JSON.stringify(headers)}`);
+      this.logger.log(`前3行数据预览: ${JSON.stringify(rows.slice(0, 3))}`);
+
       // 使用指定的映射配置处理数据
-      const mappedData = this.processExcelData(headers, rows, mappingType);
+      const result = this.processExcelData(headers, rows, mappingType);
 
       // 确保数据文件夹存在
       const dataDir = path.join(process.cwd(), 'data', 'parsed_json');
@@ -53,9 +84,19 @@ export class ExcelService {
       // 生成唯一的文件名
       const timestamp = Date.now();
       const outputPath = path.join(dataDir, `parsed_excel_data_${timestamp}.json`);
+      const invalidPath = path.join(dataDir, `invalid_data_${timestamp}.json`);
       
-      // 保存为JSON文件
-      await fs.writeJSON(outputPath, mappedData, { spaces: 2 });
+      // 保存有效数据为JSON文件
+      await fs.writeJSON(outputPath, result.validData, { spaces: 2 });
+      
+      // 保存无效数据为JSON文件（如果有的话）
+      let invalidJsonPath: string | undefined = undefined;
+      if (result.invalidData.length > 0) {
+        await fs.writeJSON(invalidPath, result.invalidData, { spaces: 2 });
+        // 只返回文件名，不包含完整路径
+        invalidJsonPath = `invalid_data_${timestamp}.json`;
+        this.logger.log(`无效数据已保存到: ${invalidPath}`);
+      }
 
       // 清理上传的临时文件
       if (await fs.pathExists(file.path)) {
@@ -64,13 +105,15 @@ export class ExcelService {
 
       return {
         success: true,
-        data: mappedData,
-        total: mappedData.length,
+        data: result.validData,
+        total: result.validData.length,
         originalTotal: rows.length,
-        filterRate: Math.round((1 - mappedData.length / rows.length) * 100),
+        invalidTotal: result.invalidData.length,
+        filterRate: Math.round((result.invalidData.length / rows.length) * 100),
         jsonPath: outputPath,
+        invalidJsonPath: invalidJsonPath,
         mappingType: mappingType,
-        message: `成功解析 ${mappedData.length} 条数据，已保存到 ${outputPath}，使用映射: ${mappingType}`
+        message: `成功解析 ${result.validData.length} 条有效数据，${result.invalidData.length} 条无效数据，已保存到 ${outputPath}，使用映射: ${mappingType}`
       };
 
     } catch (error) {
@@ -157,14 +200,14 @@ export class ExcelService {
   /**
    * 通用数据处理方法：映射 + 过滤
    */
-  private processExcelData(headers: string[], rows: any[][], mappingType: string): any[] {
+  private processExcelData(headers: string[], rows: any[][], mappingType: string): { validData: any[], invalidData: any[] } {
     // 目前只支持materials映射
     if (mappingType !== 'materials') {
       throw new BadRequestException(`不支持的映射类型: ${mappingType}`);
     }
     
     // 映射数据
-    const rawMappedData = rows.map((row) => {
+    const rawMappedData = rows.map((row, rowIndex) => {
       const rowData = {};
       headers.forEach((header, colIndex) => {
         const dbField = materialsMapping.fieldMapping[header];
@@ -173,19 +216,20 @@ export class ExcelService {
           rowData[dbField] = materialsMapping.convertValue(rawValue, dbField);
         }
       });
+      // 添加原始Excel行号（标题行是第1行，数据从第2行开始）
+      rowData['_excelRowNumber'] = rowIndex + 2;
       return rowData;
     });
 
-    // 使用配置化的过滤方法，静静过滤掉无效数据
-    const validData = materialsMapping.filterData(rawMappedData);
+    // 使用配置化的过滤方法，分离有效和无效数据
+    const result = materialsMapping.filterData(rawMappedData);
     
-    // 简单记录过滤结果
-    if (rawMappedData.length > validData.length) {
-      const filteredCount = rawMappedData.length - validData.length;
-      this.logger.log(`数据过滤完成: ${validData.length}条有效数据，${filteredCount}条无效数据已过滤`);
+    // 记录过滤结果
+    if (result.invalidData.length > 0) {
+      this.logger.log(`数据过滤完成: ${result.validData.length}条有效数据，${result.invalidData.length}条无效数据`);
     }
     
-    return validData;
+    return result;
   }
 
   /**

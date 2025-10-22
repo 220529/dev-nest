@@ -20,6 +20,10 @@ import { HttpLoggingInterceptor } from '@/common';
       rootPath: join(__dirname, '..', 'public'),
       serveRoot: '/public',
     }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'data'),
+      serveRoot: '/data',
+    }),
   ],
   controllers: [AppController],
   providers: [

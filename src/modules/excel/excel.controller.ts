@@ -48,7 +48,11 @@ export class ExcelController {
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: ParseExcelDto,
   ) {
-    return this.excelService.parseExcel(file, dto.mappingType || 'materials');
+    return this.excelService.parseExcel(file, {
+      mappingType: dto.mappingType || 'materials',
+      sheetName: dto.sheetName,
+      sheetIndex: dto.sheetIndex
+    });
   }
 
   /**

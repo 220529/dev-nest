@@ -16,7 +16,7 @@
 export const fieldMapping = {
   '产品编码': 'number',
   '产品名称': 'name',
-  '采购价': 'purchasePrice',
+  '含税采购价': 'purchasePrice',
   '税点': 'taxRate',
   '不含税采购价': 'untaxedPurchasePrice',
 };
@@ -34,7 +34,8 @@ export const validationRules = {
   // 必填字段：这些字段不能为空，否则整行数据无效
   requiredFields: ['number'],
   // 数值字段不能为0：这些字段不能为0，否则整行数据无效（空值已转换为0）
-  nonZeroFields: ['taxRate'],
+  // nonZeroFields: [], // 暂时移除taxRate验证，因为Excel中税点列包含品牌信息
+  nonZeroFields: ['taxRate'], // Excel中税点列实际是品牌，不是数字
   // nonZeroFields: ['purchasePrice', 'taxRate', 'untaxedPurchasePrice'],
   // nonZeroFields: ['purchasePrice', 'untaxedPurchasePrice'],
   // 可选：数字字段不能为负数的配置（未来扩展用）
@@ -60,9 +61,23 @@ export function convertValue(value: any, fieldName: string): any {
   return (value === null || value === undefined || value === '') ? null : String(value);
 }
 
-// 数据过滤函数
-export function filterData(mappedData: any[]): any[] {
-  return mappedData.filter(item => {
+// 清理内部字段（以 _ 开头的字段）
+function cleanInternalFields(item: any): any {
+  const cleanedItem = {};
+  for (const [key, value] of Object.entries(item)) {
+    if (!key.startsWith('_')) {
+      cleanedItem[key] = value;
+    }
+  }
+  return cleanedItem;
+}
+
+// 数据过滤函数 - 返回有效和无效数据分类结果
+export function filterData(mappedData: any[]): { validData: any[], invalidData: any[] } {
+  const validData: any[] = [];
+  const invalidData: any[] = [];
+  
+  mappedData.forEach(item => {
     // 检查所有必填字段
     const hasRequiredFields = validationRules.requiredFields.every(fieldName => {
       const value = item[fieldName];
@@ -75,8 +90,21 @@ export function filterData(mappedData: any[]): any[] {
       return value !== null && value !== undefined && value !== 0 && value !== '';
     });
     
-    return hasRequiredFields && hasNonZeroFields;
+    const isValid = hasRequiredFields && hasNonZeroFields;
+    
+    if (isValid) {
+      // 有效数据移除内部字段
+      validData.push(cleanInternalFields(item));
+    } else {
+      // 无效数据保留所有字段，包括Excel行号，并添加原因说明
+      invalidData.push({
+        ...item,
+        _invalidReason: getInvalidReason(item)
+      });
+    }
   });
+  
+  return { validData, invalidData };
 }
 
 // 获取无效数据的原因（用于调试）

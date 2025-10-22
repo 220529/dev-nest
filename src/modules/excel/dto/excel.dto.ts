@@ -1,5 +1,7 @@
 export class ParseExcelDto {
   mappingType?: string = 'materials';
+  sheetName?: string; // 指定要读取的Sheet名称，不指定则读取第一个
+  sheetIndex?: number; // 或者通过索引指定Sheet，从0开始
 }
 
 export class RunFlowDto {
@@ -16,8 +18,10 @@ export interface ExcelParseResult {
   data?: any[];
   total?: number;
   originalTotal?: number;
+  invalidTotal?: number;
   filterRate?: number;
   jsonPath?: string;
+  invalidJsonPath?: string;
   mappingType?: string;
   message: string;
 }

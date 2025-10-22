@@ -224,6 +224,19 @@
             </select>
         </div>
         
+        <!-- Sheet选择 -->
+        <div class="form-group">
+            <label for="sheetIndex">Sheet选择</label>
+            <select id="sheetIndex" class="form-select">
+                <option value="" selected>自动选择第一个Sheet</option>
+                <option value="0">Sheet 1 (索引 0)</option>
+                <option value="1">Sheet 2 (索引 1)</option>
+                <option value="2">Sheet 3 (索引 2)</option>
+                <option value="3">Sheet 4 (索引 3)</option>
+            </select>
+            <small class="form-text">如果Excel包含多个Sheet，可以手动选择要解析的Sheet</small>
+        </div>
+        
         <!-- 文件上传 -->
         <div class="upload-area" id="uploadArea">
             <div style="font-size: 48px; margin-bottom: 15px;">📊</div>
@@ -422,6 +435,12 @@
                 const selectedMappingType = document.getElementById('mappingType').value;
                 formData.append('mappingType', selectedMappingType);
                 
+                // 获取选中的Sheet索引
+                const selectedSheetIndex = document.getElementById('sheetIndex').value;
+                if (selectedSheetIndex !== '') {
+                    formData.append('sheetIndex', selectedSheetIndex);
+                }
+                
                 const response = await fetch('/api/excel/parse', {
                     method: 'POST',
                     body: formData
@@ -454,8 +473,16 @@
             document.getElementById('stats').style.display = 'block';
             
             // 显示结果
-            const message = `✅ 解析成功！处理了 ${result.total} 条有效数据`;
-            showResult('success', message);
+            let message = `✅ 解析成功！处理了 ${result.total} 条有效数据`;
+            if (result.invalidTotal && result.invalidTotal > 0) {
+                message += `，${result.invalidTotal} 条无效数据`;
+                
+                // 添加无效数据查看链接
+                if (result.invalidJsonPath) {
+                    message += ` <a href="/data/parsed_json/${result.invalidJsonPath}" target="_blank" style="color: #e74c3c; text-decoration: underline;" title="包含产品编码、Excel行号和过滤原因">📋 查看无效数据</a>`;
+                }
+            }
+            showResult('success', message, true); // 允许HTML以支持链接
             
             // 显示数据预览
             if (result.data && result.data.length > 0) {
@@ -573,10 +600,14 @@
             document.getElementById('loading').style.display = show ? 'block' : 'none';
         }
         
-        function showResult(type, message) {
+        function showResult(type, message, allowHtml = false) {
             const result = document.getElementById('result');
             result.className = `result ${type}`;
-            result.textContent = message;
+            if (allowHtml) {
+                result.innerHTML = message;
+            } else {
+                result.textContent = message;
+            }
             result.style.display = 'block';
         }
         
