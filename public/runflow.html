@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RunFlow 调用</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border: 1px solid #ddd;
+        }
+
+        h1 {
+            font-size: 20px;
+            margin-bottom: 30px;
+            font-weight: normal;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        select,
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #999;
+        }
+
+        textarea {
+            min-height: 120px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+        }
+
+        button:hover:not(:disabled) {
+            background: #f5f5f5;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button.primary {
+            background: #333;
+            color: white;
+            border-color: #333;
+        }
+
+        button.primary:hover:not(:disabled) {
+            background: #555;
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            display: none;
+            font-size: 14px;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result.error {
+            border-color: #d00;
+            background: #fff0f0;
+            color: #d00;
+        }
+
+        .result.success {
+            border-color: #0a0;
+            background: #f0fff0;
+            color: #0a0;
+        }
+
+        .result pre {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f5f5f5;
+            overflow-x: auto;
+            font-size: 13px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RunFlow 调用</h1>
+
+        <div class="form-group">
+            <label>操作</label>
+            <select id="action">
+                <option value="">加载中...</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>参数（JSON格式，可选）</label>
+            <textarea id="params" placeholder='{"key": "value"}'></textarea>
+        </div>
+
+        <div class="btn-group">
+            <button class="primary" id="submitBtn" onclick="callRunFlow()">调用</button>
+            <button onclick="resetForm()">重置</button>
+        </div>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        let configData = { actions: [] };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConfig();
+        });
+
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/excel/runflow-config');
+                const result = await response.json();
+                
+                if (result.success) {
+                    configData = result;
+                    
+                    const actionSelect = document.getElementById('action');
+                    actionSelect.innerHTML = '';
+                    result.actions.forEach((action, index) => {
+                        const option = document.createElement('option');
+                        option.value = index;
+                        option.textContent = action.name;
+                        actionSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('加载配置失败:', error);
+            }
+        }
+
+        async function callRunFlow() {
+            const actionSelect = document.getElementById('action');
+            const selectedIndex = actionSelect.value;
+            const paramsText = document.getElementById('params').value.trim();
+
+            if (selectedIndex === '') {
+                showResult('请选择操作', 'error');
+                return;
+            }
+
+            const selectedAction = configData.actions[selectedIndex];
+            if (!selectedAction) {
+                showResult('无效的操作', 'error');
+                return;
+            }
+
+            let params = {};
+            if (paramsText) {
+                try {
+                    params = JSON.parse(paramsText);
+                } catch (e) {
+                    showResult('参数格式错误', 'error');
+                    return;
+                }
+            }
+
+            const requestData = {
+                flowId: selectedAction.flowId,
+                action: selectedAction.action,
+                ...params
+            };
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '处理中...';
+            
+            showResult('请求中...', 'loading');
+
+            try {
+                const response = await fetch('/api/runFlow', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+                showResult('调用成功\n\n' + JSON.stringify(result, null, 2), 'success', true);
+
+            } catch (error) {
+                showResult('调用失败: ' + error.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '调用';
+            }
+        }
+
+        function showResult(message, type, isJson = false) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = 'result show ' + type;
+            
+            if (isJson) {
+                const parts = message.split('\n\n');
+                resultDiv.innerHTML = parts[0] + '<pre>' + parts[1] + '</pre>';
+            } else {
+                resultDiv.textContent = message;
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('action').selectedIndex = 0;
+            document.getElementById('params').value = '';
+            document.getElementById('result').className = 'result';
+        }
+    </script>
+</body>
+</html>

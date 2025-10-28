@@ -21,4 +21,16 @@ export class AppController {
       res.status(404).send('Upload page not found');
     }
   }
+
+  @Get('runflow')
+  async getRunFlowPage(@Res() res: Response) {
+    const runflowPath = path.join(process.cwd(), 'public', 'runflow.html');
+    
+    if (fs.existsSync(runflowPath)) {
+      const html = fs.readFileSync(runflowPath, 'utf8');
+      res.type('html').send(html);
+    } else {
+      res.status(404).send('RunFlow page not found');
+    }
+  }
 }

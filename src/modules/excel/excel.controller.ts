@@ -70,5 +70,21 @@ export class ExcelController {
   async getMappingTypes() {
     return this.excelService.getMappingTypes();
   }
+
+  /**
+   * 获取已解析的JSON文件列表
+   */
+  @Get('json-files')
+  async getJsonFiles() {
+    return this.excelService.getJsonFiles();
+  }
+
+  /**
+   * 获取RunFlow配置（FlowId和Action选项）
+   */
+  @Get('runflow-config')
+  async getRunFlowConfig() {
+    return this.excelService.getRunFlowConfig();
+  }
 }
 

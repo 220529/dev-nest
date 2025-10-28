@@ -5,6 +5,7 @@ import * as path from 'path';
 import { RunFlowDto, ExcelParseResult, BatchProcessResult } from './dto/excel.dto';
 import * as materialsMapping from '../../schemas/materials.mapping';
 import { ErpService } from '../erp/erp.service';
+import { actionConfigs } from '../../config/runflow.config';
 
 @Injectable()
 export class ExcelService {
@@ -150,7 +151,8 @@ export class ExcelService {
       // 构造API参数
       const apiParams = {
         flowId: dto.flowId || 'z244yolix5cg9meb',
-        action: dto.action || 'materials_excel'
+        action: dto.action || 'materials_excel',
+        ...dto.params // 合并额外参数
       };
 
       const batchSize = dto.batchSize || 200;
@@ -194,6 +196,96 @@ export class ExcelService {
     } catch (error) {
       this.logger.error('获取映射配置失败:', error);
       throw new BadRequestException(`获取映射配置失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 获取已解析的JSON文件列表
+   */
+  async getJsonFiles(): Promise<{ success: boolean; files: any[]; message?: string }> {
+    try {
+      const dataDir = path.join(process.cwd(), 'data', 'parsed_json');
+      
+      // 确保目录存在
+      if (!await fs.pathExists(dataDir)) {
+        return {
+          success: true,
+          files: [],
+          message: '数据目录不存在'
+        };
+      }
+
+      // 读取目录下的所有文件
+      const allFiles = await fs.readdir(dataDir);
+      
+      // 只筛选出有效的JSON文件（不包含invalid_data开头的文件）
+      const jsonFiles = allFiles
+        .filter(file => file.startsWith('parsed_excel_data_') && file.endsWith('.json'))
+        .sort((a, b) => {
+          // 按时间戳降序排列（最新的在前）
+          const timestampA = parseInt(a.replace('parsed_excel_data_', '').replace('.json', ''));
+          const timestampB = parseInt(b.replace('parsed_excel_data_', '').replace('.json', ''));
+          return timestampB - timestampA;
+        });
+
+      // 获取文件信息
+      const fileDetails = await Promise.all(
+        jsonFiles.map(async (file) => {
+          const filePath = path.join(dataDir, file);
+          const stats = await fs.stat(filePath);
+          const timestamp = parseInt(file.replace('parsed_excel_data_', '').replace('.json', ''));
+          const date = new Date(timestamp);
+          
+          // 格式化文件大小
+          const formatSize = (bytes: number): string => {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+          };
+
+          // 格式化日期
+          const formatDate = (date: Date): string => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}`;
+          };
+
+          return {
+            name: file,
+            path: filePath,
+            size: formatSize(stats.size),
+            timestamp: timestamp,
+            date: formatDate(date)
+          };
+        })
+      );
+
+      return {
+        success: true,
+        files: fileDetails
+      };
+
+    } catch (error) {
+      this.logger.error('获取JSON文件列表失败:', error);
+      throw new BadRequestException(`获取JSON文件列表失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 获取RunFlow配置（Action选项）
+   */
+  getRunFlowConfig(): { success: boolean; actions: any[] } {
+    try {
+      return {
+        success: true,
+        actions: actionConfigs
+      };
+    } catch (error) {
+      this.logger.error('获取RunFlow配置失败:', error);
+      throw new BadRequestException(`获取RunFlow配置失败: ${error.message}`);
     }
   }
 

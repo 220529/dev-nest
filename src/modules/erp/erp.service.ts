@@ -249,22 +249,33 @@ export class ErpService {
    * @returns 转发结果
    */
   async forwardRunFlow(params: any): Promise<any> {
-    const fs = require('fs');
-    
     try {
-      // 读取数据文件
-      const jsData = fs.readFileSync(params.dataPath, 'utf8');
+      // 如果有dataPath，从文件读取数据（兼容旧逻辑）
+      if (params.dataPath) {
+        const fs = require('fs');
+        const jsData = fs.readFileSync(params.dataPath, 'utf8');
+        const data = { ...params, data: jsData };
+        
+        this.logger.log(`转发请求到: ${data.hostPre}/api/open/runFlow`);
+        const result = await this.callOpenRunFlow(data);
+        this.logger.log(`转发请求成功: ${JSON.stringify(result)}`);
+        
+        return result;
+      }
       
-      // 构造请求数据
-      const data = { ...params, data: jsData };
+      // 如果有hostPre，使用开放接口
+      if (params.hostPre) {
+        this.logger.log(`转发请求到: ${params.hostPre}/api/open/runFlow`);
+        const result = await this.callOpenRunFlow(params);
+        this.logger.log(`转发请求成功: ${JSON.stringify(result)}`);
+        
+        return result;
+      }
       
-      this.logger.log(`转发请求到: ${data.hostPre}/api/open/runFlow`);
-      
-      // 调用外部API
-      const result = await this.callOpenRunFlow(data);
-      
-      // 打印转发结果
-      this.logger.log(`转发请求成功: ${JSON.stringify(result)}`);
+      // 否则直接调用内部runFlow接口
+      this.logger.log(`调用runFlow接口: ${JSON.stringify(params)}`);
+      const result = await this.callRunFlow(params);
+      this.logger.log(`调用成功: ${JSON.stringify(result)}`);
       
       return result;
       

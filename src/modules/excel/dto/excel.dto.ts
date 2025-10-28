@@ -11,6 +11,7 @@ export class RunFlowDto {
   testMode?: boolean = false;
   testLimit?: number = 1000;
   flowId?: string = 'z244yolix5cg9meb';
+  params?: Record<string, any>; // 额外参数
 }
 
 export interface ExcelParseResult {
