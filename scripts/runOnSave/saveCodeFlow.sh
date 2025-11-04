@@ -1,6 +1,6 @@
 source E:/dev-nest/scripts/runOnSave/functions.sh
 id="fccmyi3m4lmxo4os"
-accessKey="k1tV6MMG9Zfp1njF7AvRr1h7KH2UaXRM"
+accessKey="26mjC4UyHJW24ZKTfuneQqGUFP6C9uHB"
 accessSecret=$(cat $2/accessSecretTest)
 hostPre="https://erp.tintan.net"
 host="erp.tintan.net"

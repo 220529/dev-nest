@@ -6,6 +6,7 @@ import { join } from 'path';
 import { AppController } from '@/app.controller';
 import { ExcelModule } from '@/modules/excel/excel.module';
 import { ErpModule } from '@/modules/erp/erp.module';
+import { WebsocketModule } from '@/modules/websocket/websocket.module';
 import { HttpLoggingInterceptor } from '@/common';
 
 @Module({
@@ -16,6 +17,7 @@ import { HttpLoggingInterceptor } from '@/common';
     }),
     ErpModule,
     ExcelModule,
+    WebsocketModule,
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),
       serveRoot: '/public',

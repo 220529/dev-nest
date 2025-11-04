@@ -33,4 +33,16 @@ export class AppController {
       res.status(404).send('RunFlow page not found');
     }
   }
+
+  @Get('websocket')
+  async getWebsocketPage(@Res() res: Response) {
+    const websocketPath = path.join(process.cwd(), 'public', 'websocket.html');
+    
+    if (fs.existsSync(websocketPath)) {
+      const html = fs.readFileSync(websocketPath, 'utf8');
+      res.type('html').send(html);
+    } else {
+      res.status(404).send('WebSocket page not found');
+    }
+  }
 }
