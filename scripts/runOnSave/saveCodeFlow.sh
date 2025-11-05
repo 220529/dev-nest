@@ -1,10 +1,21 @@
 source E:/dev-nest/scripts/runOnSave/functions.sh
 id="fccmyi3m4lmxo4os"
-accessKey="26mjC4UyHJW24ZKTfuneQqGUFP6C9uHB"
+accessKey="k1tV6MMG9Zfp1njF7AvRr1h7KH2UaXRM"
 accessSecret=$(cat $2/accessSecretTest)
 hostPre="https://erp.tintan.net"
 host="erp.tintan.net"
 echo $accessSecret
+
+if [[ $3 == "qa" ]]; then
+    id="fccmyi3m4lmxo4os"
+    # accessKey="26mjC4UyHJW24ZKTfuneQqGUFP6C9uHB"
+    accessKey="58a62cdb34e8dfd631c9d0c60eb11591"
+    accessSecret=$(cat $2/accessSecretQa)
+    # TODO: 如果 qa 环境需要独立域名，请修改以下配置
+    hostPre="https://erp.tintan.net"
+    host="erp.tintan.net"
+fi
+
 if [[ $3 == "prod" ]]; then
    id="fccmyi3m4lmxo4os"
     accessKey="26mjC4UyHJW24ZKTfuneQqGUFP6C9uHB"

@@ -25,6 +25,22 @@ if [[ $1 == *"src/format"* ]]; then
   sh $SCRIPT_DIR/saveFormat.sh $1 $2
 fi
 
+# 如果路径是qaSrc下的jsonToPage
+if [[ $1 == *"qaSrc/jsonToPage"* ]]; then
+  # 保存jsonToPage文件
+  sh $SCRIPT_DIR/saveJsonToPage.sh $1 $2 "qa"
+fi
+# 如果路径是qaSrc下的codeFlow
+if [[ $1 == *"qaSrc/codeFlow"* ]]; then
+  # 保存codeFlow文件
+  sh $SCRIPT_DIR/saveCodeFlow.sh $1 $2 "qa"
+fi
+# 如果路径是qaSrc下的format
+if [[ $1 == *"qaSrc/format"* ]]; then
+  # 保存format文件
+  sh $SCRIPT_DIR/saveFormat.sh $1 $2 "qa"
+fi
+
 # 如果路径是prodSrc下的jsonToPage
 if [[ $1 == *"prodSrc/jsonToPage"* ]]; then
   # 保存jsonToPage文件
