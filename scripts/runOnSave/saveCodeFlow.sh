@@ -12,8 +12,8 @@ if [[ $3 == "qa" ]]; then
     accessKey="58a62cdb34e8dfd631c9d0c60eb11591"
     accessSecret=$(cat $2/accessSecretQa)
     # TODO: 如果 qa 环境需要独立域名，请修改以下配置
-    hostPre="https://erp.tintan.net"
-    host="erp.tintan.net"
+    hostPre="https://erp-staging.tintan.net"
+    host="erp-staging.tintan.net"
 fi
 
 if [[ $3 == "prod" ]]; then

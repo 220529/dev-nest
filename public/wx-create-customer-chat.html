@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>创建客户群</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+          'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+        background: #f5f5f5;
+        padding: 20px;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        font-size: 20px;
+        margin-bottom: 20px;
+        color: #333;
+        text-align: center;
+      }
+      .section {
+        margin-bottom: 24px;
+      }
+      .section-title {
+        font-size: 16px;
+        color: #333;
+        margin-bottom: 12px;
+        font-weight: 500;
+      }
+      .btn {
+        width: 100%;
+        padding: 14px;
+        background: #1890ff;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 16px;
+        cursor: pointer;
+        margin-bottom: 12px;
+        transition: background 0.3s;
+      }
+      .btn:hover:not(:disabled) {
+        background: #40a9ff;
+      }
+      .btn:active:not(:disabled) {
+        background: #096dd9;
+      }
+      .btn:disabled {
+        background: #d9d9d9;
+        cursor: not-allowed;
+      }
+      .btn-primary {
+        background: #1890ff;
+      }
+      .btn-success {
+        background: #52c41a;
+      }
+      .btn-success:hover:not(:disabled) {
+        background: #73d13d;
+      }
+      .selected-list {
+        background: #f0f7ff;
+        padding: 12px;
+        border-radius: 6px;
+        margin-top: 12px;
+        min-height: 40px;
+      }
+      .selected-item {
+        display: inline-block;
+        background: #e6f7ff;
+        padding: 6px 12px;
+        border-radius: 4px;
+        margin: 4px 4px 4px 0;
+        font-size: 14px;
+        color: #1890ff;
+      }
+      .selected-item .name {
+        font-weight: 500;
+      }
+      .selected-item .id {
+        font-size: 12px;
+        color: #8c8c8c;
+        margin-left: 6px;
+      }
+      .result {
+        padding: 12px;
+        border-radius: 6px;
+        margin-top: 12px;
+        font-size: 14px;
+        display: none;
+      }
+      .result.show {
+        display: block;
+      }
+      .result.success {
+        background: #f6ffed;
+        border: 1px solid #b7eb8f;
+        color: #52c41a;
+      }
+      .result.error {
+        background: #fff1f0;
+        border: 1px solid #ffccc7;
+        color: #ff4d4f;
+      }
+      .result.info {
+        background: #e6f7ff;
+        border: 1px solid #91d5ff;
+        color: #1890ff;
+      }
+      .loading {
+        text-align: center;
+        padding: 20px;
+        color: #8c8c8c;
+      }
+      .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 24px;
+        padding: 0 10px;
+      }
+      .step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+      }
+      .step::after {
+        content: '';
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        width: 100%;
+        height: 2px;
+        background: #e8e8e8;
+        z-index: 0;
+      }
+      .step:last-child::after {
+        display: none;
+      }
+      .step-number {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #e8e8e8;
+        color: #8c8c8c;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        position: relative;
+        z-index: 1;
+      }
+      .step.active .step-number {
+        background: #1890ff;
+        color: white;
+      }
+      .step.completed .step-number {
+        background: #52c41a;
+        color: white;
+      }
+      .step-label {
+        font-size: 12px;
+        color: #8c8c8c;
+        margin-top: 6px;
+      }
+      .step.active .step-label {
+        color: #1890ff;
+        font-weight: 500;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>创建客户群</h1>
+
+      <!-- 步骤指示器 -->
+      <div class="step-indicator">
+        <div class="step" id="step1">
+          <div class="step-number">1</div>
+          <div class="step-label">选择客户</div>
+        </div>
+        <div class="step" id="step2">
+          <div class="step-number">2</div>
+          <div class="step-label">选择成员</div>
+        </div>
+        <div class="step" id="step3">
+          <div class="step-number">3</div>
+          <div class="step-label">创建群聊</div>
+        </div>
+      </div>
+
+      <!-- 步骤1: 选择客户 -->
+      <div class="section">
+        <div class="section-title">1. 选择客户（外部联系人）</div>
+        <button
+          class="btn btn-primary"
+          id="btnChooseCustomer"
+          onclick="chooseCustomer()"
+        >
+          选择客户
+        </button>
+        <div
+          id="selectedCustomers"
+          class="selected-list"
+          style="display: none"
+        ></div>
+      </div>
+
+      <!-- 步骤2: 选择内部成员 -->
+      <div class="section">
+        <div class="section-title">2. 选择服务人员（内部成员）</div>
+        <button
+          class="btn btn-primary"
+          id="btnChooseStaff"
+          onclick="chooseStaff()"
+          disabled
+        >
+          选择服务人员
+        </button>
+        <div
+          id="selectedStaff"
+          class="selected-list"
+          style="display: none"
+        ></div>
+      </div>
+
+      <!-- 步骤3: 创建群聊 -->
+      <div class="section">
+        <div class="section-title">3. 创建客户群</div>
+        <button
+          class="btn btn-success"
+          id="btnCreateChat"
+          onclick="createCustomerChat()"
+          disabled
+        >
+          创建客户群
+        </button>
+        <div id="result" class="result"></div>
+      </div>
+    </div>
+
+    <!-- 企微JS-SDK -->
+    <script src="https://res.wx.qq.com/open/js/jweixin-1.2.0.js"></script>
+
+    <script>
+      // 配置：通过dev-nest项目转发请求到t1-code项目
+      const API_BASE = window.location.origin;
+      const SIGNATURE_API = `${API_BASE}/api/runFlow`;
+
+      // 全局状态
+      let selectedCustomers = []; // [{ userId: 'external_userid', name: '客户名称' }]
+      let selectedStaffMembers = []; // [{ userId: 'wxuserid', name: '员工名称' }]
+      let jsSDKReady = false;
+
+      // 初始化JS-SDK
+      async function initJSSDK() {
+        try {
+          showResult('正在初始化JS-SDK...', 'info');
+
+          const url = window.location.href.split('#')[0];
+
+          const requestData = {
+            flowId: 'oknfqepwkcohzkfv', // 获取企微JS-SDK签名的流程ID
+            url: url, // 当前页面URL，用于生成签名
+            // type: 0, // 可选：0=企业微信（默认），3=微信公众号
+            // corpid: 'ww8d13fb7282087b07', // 可选：企业ID，如果不传会从配置表获取
+          };
+
+          const res = await fetch(SIGNATURE_API, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData),
+          });
+
+          const response = await res.json();
+
+          // 检查响应格式：{ code: 1, data: { ... }, message: "请求成功" }
+          if (response.code !== 1) {
+            const errorMsg =
+              response.message ||
+              response.handleError ||
+              response.error ||
+              '获取签名失败';
+            showResult('获取签名失败：' + errorMsg, 'error');
+            return false;
+          }
+
+          // 从 data.data 中提取签名信息
+          const data = response.data;
+
+          if (data.handleError || data.error) {
+            showResult(
+              '获取签名失败：' + (data.handleError || data.error),
+              'error',
+            );
+            return false;
+          }
+
+          if (
+            !data.appId ||
+            !data.signature ||
+            !data.timestamp ||
+            !data.nonceStr
+          ) {
+            showResult('签名数据不完整：' + JSON.stringify(data), 'error');
+            return false;
+          }
+
+          // 配置JS-SDK
+          wx.config({
+            beta: true, // 必须这样写，否则wx.invoke调用形式的jsapi会有问题
+            debug: true, // 开启调试模式，查看详细错误信息
+            appId: data.appId, // 企业ID
+            timestamp: data.timestamp, // 时间戳（字符串）
+            nonceStr: data.nonceStr, // 随机字符串
+            signature: data.signature, // 签名
+            jsApiList: [
+              'chooseExternalContact', // 选择外部联系人
+              'openEnterpriseChat', // 打开会话/创建群聊
+            ],
+          });
+
+          wx.ready(function () {
+            console.log('JS-SDK配置成功');
+            jsSDKReady = true;
+            showResult('JS-SDK初始化成功，可以开始选择客户', 'success');
+            updateStep(1, 'active');
+          });
+
+          wx.error(function (res) {
+            console.error('JS-SDK配置失败', res);
+            showResult('JS-SDK配置失败：' + JSON.stringify(res), 'error');
+          });
+
+          return true;
+        } catch (error) {
+          console.error('初始化JS-SDK失败', error);
+          showResult('初始化失败：' + error.message, 'error');
+          return false;
+        }
+      }
+
+      // 选择客户（外部联系人）
+      function chooseCustomer() {
+        console.log('chooseCustomer 被调用', { jsSDKReady, wx: typeof wx });
+
+        if (!jsSDKReady) {
+          showResult('JS-SDK未初始化，请稍候...', 'error');
+          return;
+        }
+
+        // 检查 wx 对象和 invoke 方法
+        if (!wx || !wx.invoke) {
+          showResult('JS-SDK未正确加载，请刷新页面重试', 'error');
+          return;
+        }
+
+        // 检查API是否可用
+        wx.checkJsApi({
+          jsApiList: ['chooseExternalContact'],
+          success: function (res) {
+            console.log('checkJsApi 结果', res);
+            if (!res.checkResult || !res.checkResult.chooseExternalContact) {
+              showResult(
+                'chooseExternalContact API不可用，请检查：\n1. 企微应用是否开通"客户联系"权限\n2. 是否配置了JS-SDK可信域名\n3. 当前用户是否有客户联系权限',
+                'error',
+              );
+              return;
+            }
+
+            // API可用，调用选择客户
+            showResult('正在打开客户选择界面...', 'info');
+
+            wx.invoke('chooseExternalContact', {
+              filterType: 0, // 0-不过滤，1-仅筛选可联系的外部联系人
+              success: function (res) {
+                console.log('选择客户成功', res);
+
+                if (res.result && res.result.length > 0) {
+                  // 更新选中的客户列表
+                  selectedCustomers = res.result.map((item) => ({
+                    userId: item.userId,
+                    name: item.name || '未知客户',
+                  }));
+
+                  // 显示选中的客户
+                  displaySelectedCustomers();
+
+                  // 更新步骤状态
+                  updateStep(1, 'completed');
+                  updateStep(2, 'active');
+
+                  // 启用下一步按钮
+                  document.getElementById('btnChooseStaff').disabled = false;
+
+                  showResult(
+                    `已选择 ${selectedCustomers.length} 位客户`,
+                    'success',
+                  );
+                } else {
+                  showResult('未选择任何客户', 'info');
+                }
+              },
+              fail: function (err) {
+                console.error('选择客户失败', err);
+                let errorMsg = '选择客户失败';
+                if (err.errMsg) {
+                  errorMsg += '：' + err.errMsg;
+                } else {
+                  errorMsg += '：' + JSON.stringify(err);
+                }
+
+                // 常见错误提示
+                if (err.errMsg && err.errMsg.includes('permission')) {
+                  errorMsg +=
+                    '\n\n可能原因：\n1. 当前用户没有客户联系权限\n2. 应用未开通客户联系功能\n3. 未配置JS-SDK可信域名';
+                }
+
+                showResult(errorMsg, 'error');
+              },
+            });
+          },
+          fail: function (err) {
+            console.error('checkJsApi 失败', err);
+            showResult('检查API权限失败：' + JSON.stringify(err), 'error');
+          },
+        });
+      }
+
+      // 选择服务人员（内部成员）
+      function chooseStaff() {
+        if (!jsSDKReady) {
+          showResult('JS-SDK未初始化，请稍候...', 'error');
+          return;
+        }
+
+        if (selectedCustomers.length === 0) {
+          showResult('请先选择客户', 'error');
+          return;
+        }
+
+        // 注意：企微JS-SDK没有直接选择内部成员的接口
+        // 使用 openEnterpriseChat 时，如果只传外部联系人，企微客户端会自动打开选择内部成员的界面
+        // 这里我们直接进入创建群聊步骤，让用户在企微客户端选择内部成员
+        showResult('点击"创建客户群"后，可在企微客户端选择服务人员', 'info');
+        updateStep(2, 'completed');
+        updateStep(3, 'active');
+        document.getElementById('btnCreateChat').disabled = false;
+      }
+
+      // 创建客户群
+      function createCustomerChat() {
+        if (!jsSDKReady) {
+          showResult('JS-SDK未初始化，请稍候...', 'error');
+          return;
+        }
+
+        if (selectedCustomers.length === 0) {
+          showResult('请先选择客户', 'error');
+          return;
+        }
+
+        // 构建群成员列表
+        // openEnterpriseChat 的 userlist 参数格式：外部联系人ID | 内部成员ID（用 | 分隔）
+        // 如果只传外部联系人，企微客户端会自动打开选择内部成员的界面
+        const externalUserIds = selectedCustomers.map((c) => c.userId);
+        let userlist = externalUserIds.join('|');
+
+        // 如果有选中的内部成员，添加到列表
+        if (selectedStaffMembers.length > 0) {
+          const staffIds = selectedStaffMembers.map((s) => s.userId).join('|');
+          userlist = `${userlist}|${staffIds}`;
+        }
+
+        // 生成群名称
+        const groupName =
+          selectedCustomers.length === 1
+            ? `${selectedCustomers[0].name}-服务群`
+            : `客户服务群-${selectedCustomers.length}人`;
+
+        showResult('正在创建客户群...', 'info');
+
+        wx.invoke('openEnterpriseChat', {
+          userlist: userlist, // 成员列表（外部联系人ID | 内部成员ID）
+          groupName: groupName, // 群名称（可选）
+          success: function (res) {
+            console.log('创建群聊成功', res);
+            updateStep(3, 'completed');
+            showResult(
+              '客户群创建成功！请在企微客户端完成后续操作。',
+              'success',
+            );
+
+            // 可选：调用后端接口记录群信息
+            // recordChatInfo(res);
+          },
+          fail: function (err) {
+            console.error('创建群聊失败', err);
+            showResult('创建群聊失败：' + JSON.stringify(err), 'error');
+          },
+        });
+      }
+
+      // 显示选中的客户
+      function displaySelectedCustomers() {
+        const container = document.getElementById('selectedCustomers');
+        if (selectedCustomers.length === 0) {
+          container.style.display = 'none';
+          return;
+        }
+
+        container.innerHTML = selectedCustomers
+          .map(
+            (c) =>
+              `<div class="selected-item">
+          <span class="name">${c.name}</span>
+          <span class="id">(${c.userId})</span>
+        </div>`,
+          )
+          .join('');
+        container.style.display = 'block';
+      }
+
+      // 更新步骤状态
+      function updateStep(stepNum, status) {
+        const step = document.getElementById(`step${stepNum}`);
+        if (step) {
+          step.className = `step ${status}`;
+        }
+      }
+
+      // 显示结果
+      function showResult(message, type = 'info') {
+        const resultEl = document.getElementById('result');
+        resultEl.className = `result ${type} show`;
+        resultEl.textContent = message;
+      }
+
+      // 页面加载时初始化
+      window.onload = function () {
+        initJSSDK();
+      };
+    </script>
+  </body>
+</html>
