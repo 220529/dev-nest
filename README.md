@@ -1,65 +1,55 @@
 # Dev Nest
 
-简洁的Excel数据处理和ERP接口转发服务，基于NestJS构建。
+ERP 接口转发服务，基于 NestJS 构建。用于在 VSCode 中通过 RunOnSave 插件自动转发请求到 ERP 系统。
 
 ## 🚀 功能特点
 
-- **Excel解析**: 支持`.xlsx`、`.xls`、`.csv`格式
-- **数据映射**: 自动映射Excel列名到数据库字段
-- **批量处理**: 自动分批调用ERP接口，避免超时
-- **测试模式**: 可限制处理数据条数，便于验证
-- **转发服务**: 兼容原有ERP接口调用方式
-- **简洁设计**: 专注核心功能，避免过度设计
+- **智能转发**: 根据请求参数自动选择目标 API（内部接口/开放接口）
+- **文件读取**: 支持从文件路径读取数据并转发
+- **日志记录**: 完整的请求和响应日志
+- **错误处理**: 统一的错误处理和响应格式
+- **环境配置**: 支持多环境配置（开发/生产）
 
 ## 📋 快速开始
 
-### 安装依赖
+### 1. 安装依赖
 ```bash
 pnpm install
 ```
 
-### 启动服务
-```bash
-pnpm start:dev
-```
-
-### 访问应用
-- 🌐 服务地址: http://localhost:9009
-- 📊 上传页面: http://localhost:9009/upload
-- 📚 API文档: http://localhost:9009/api
-
-## 🔧 配置说明
-
-### 环境变量配置
+### 2. 配置环境变量
 
 **三层配置结构**：
 - `.env` - 基础共用配置（已提交）
 - `.env.dev` - 开发环境敏感配置（需创建）  
 - `.env.prod` - 生产环境敏感配置（需创建）
 
-1. **基础配置**（`.env`，已存在）:
+**基础配置**（`.env`，已存在）:
 ```bash
 ERP_RUN_FLOW_PATH=/api/runFlow
 ERP_OPEN_RUN_FLOW_PATH=/api/open/runFlow
 ERP_TIMEOUT=100000
-ERP_APP_VERSION=v1.1.96
 PORT=9009
 ```
 
-2. **创建环境配置**：
+**创建开发环境配置**（`.env.dev`）:
 ```bash
-# .env.dev (开发环境)
 NODE_ENV=development
-ERP_BASE_URL=https://your-dev-erp.example.com
-ERP_AUTHORIZATION=Bearer your_dev_jwt_token
-
-# .env.prod (生产环境)  
-NODE_ENV=production
-ERP_BASE_URL=https://your-prod-erp.example.com
-ERP_AUTHORIZATION=Bearer your_prod_jwt_token
+ERP_BASE_URL=https://erp.tintan.net
+ERP_AUTHORIZATION=Bearer your_jwt_token_here
+ERP_APP_VERSION=v1.1.97
 ```
 
-### 运行命令
+**创建生产环境配置**（`.env.prod`）:
+```bash
+NODE_ENV=production
+ERP_BASE_URL=https://erp.tone.top
+ERP_AUTHORIZATION=Bearer your_prod_jwt_token_here
+ERP_APP_VERSION=v1.1.97
+```
+
+### 3. 启动服务
+
 ```bash
 # 开发环境
 pnpm dev
@@ -68,65 +58,197 @@ pnpm dev
 pnpm prod
 ```
 
-### 数据映射配置
-编辑 `src/schemas/materials.mapping.ts`:
+### 4. 验证服务
+- 🌐 服务地址: http://localhost:9009
+- 📚 API 文档: http://localhost:9009/api
 
+## 🔧 VSCode RunOnSave 配置
+
+在你的项目中配置 `.vscode/settings.json`，实现保存文件时自动转发到 ERP：
+
+### macOS/Linux 配置示例
+
+```json
+{
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "match": "src/codeFlow/.*\\.js$",
+        "isAsync": true,
+        "cmd": "/Users/kaixin/main/dev-nest/scripts/runOnSave/saveCodeFlow.sh '${file}' '${workspaceFolder}'"
+      },
+      {
+        "match": "src/format/.*\\.js$",
+        "isAsync": true,
+        "cmd": "/Users/kaixin/main/dev-nest/scripts/runOnSave/saveFormat.sh '${file}' '${workspaceFolder}'"
+      },
+      {
+        "match": "src/jsonToPage/.*\\.json$",
+        "isAsync": true,
+        "cmd": "/Users/kaixin/main/dev-nest/scripts/runOnSave/saveJsonToPage.sh '${file}' '${workspaceFolder}'"
+      }
+    ]
+  }
+}
+```
+
+### Windows 配置示例
+
+```json
+{
+  "emeraldwalk.runonsave": {
+    "shell": "D:/instance/Git/bin/bash.exe",
+    "commands": [
+      {
+        "match": "src.*",
+        "isAsync": true,
+        "cmd": "E:/dev-nest/scripts/runOnSave/runOnSave.sh ./`cygpath -u '${relativeFile}'` ."
+      },
+      {
+        "match": "qaSrc.*",
+        "isAsync": true,
+        "cmd": "E:/dev-nest/scripts/runOnSave/runOnSave.sh ./`cygpath -u '${relativeFile}'` ."
+      },
+      {
+        "match": "prodSrc.*",
+        "isAsync": true,
+        "cmd": "E:/dev-nest/scripts/runOnSave/runOnSave.sh ./`cygpath -u '${relativeFile}'` ."
+      }
+    ]
+  }
+}
+```
+
+**配置说明**：
+- `match`: 匹配要监听的文件路径模式
+- `isAsync`: 异步执行，不阻塞编辑器
+- `cmd`: 执行的脚本命令
+- 脚本会自动调用 `http://localhost:9009/api/runFlow` 进行转发
+
+## 🔄 API 接口
+
+### POST /api/runFlow
+
+ERP 转发服务的核心接口，根据请求参数自动选择目标 API。
+
+**请求参数**：
 ```typescript
-export const fieldMapping = {
-  '产品编码': 'number',
-  '产品名称': 'name',
-  '采购价': 'purchasePrice',
-  // ...更多映射
-};
+{
+  dataPath?: string;    // 可选：文件路径，读取文件内容作为数据
+  hostPre?: string;     // 可选：目标主机前缀
+  host?: string;        // 可选：目标主机
+  [key: string]: any;   // 其他业务参数
+}
+```
+
+**转发逻辑**：
+1. 如果包含 `dataPath`：读取文件内容，转发到开放接口
+2. 如果包含 `hostPre`：转发到指定主机的开放接口
+3. 否则：转发到内部 RunFlow API
+
+**响应格式**：
+```typescript
+// 成功
+{
+  // ERP 返回的数据
+}
+
+// 失败
+{
+  error: string;
+  statusCode?: number;
+  message?: any;
+}
 ```
 
 ## 📁 项目结构
 
 ```
-src/
-├── modules/
-│   ├── excel/          # Excel处理模块
-│   └── erp/            # ERP接口模块
-├── schemas/            # 数据映射配置
-├── common/             # 公共组件
-└── main.ts             # 应用入口
+dev-nest/
+├── src/
+│   ├── modules/
+│   │   └── erp/              # ERP 转发模块
+│   │       ├── erp.config.ts    # 环境配置
+│   │       ├── erp.service.ts   # 转发服务
+│   │       ├── erp.controller.ts # 控制器
+│   │       └── erp.module.ts    # 模块定义
+│   ├── common/               # 公共组件（拦截器等）
+│   ├── app.module.ts         # 应用模块
+│   └── main.ts               # 应用入口
+├── scripts/
+│   └── runOnSave/            # RunOnSave 脚本
+├── .env                      # 基础配置
+├── .env.dev                  # 开发环境配置（需创建）
+├── .env.prod                 # 生产环境配置（需创建）
+└── package.json
 ```
 
-## 🔄 API接口
+## 🎯 使用场景
 
-### Excel处理
-- `POST /api/excel/parse` - 解析Excel文件
-- `POST /api/excel/runflow` - 处理解析后的数据
-- `GET /api/excel/mappings` - 获取映射配置
+### 场景 1：保存文件自动同步到 ERP
 
-### ERP转发
-- `POST /api/runFlow` - 兼容原有接口的转发服务
+1. 在 t1-code 项目中编辑 codeFlow/format/jsonToPage 文件
+2. 保存文件（Ctrl+S / Cmd+S）
+3. RunOnSave 插件自动触发脚本
+4. 脚本调用 dev-nest 的 `/api/runFlow` 接口
+5. dev-nest 转发请求到 ERP 系统
+6. ERP 系统更新数据
 
-## 🎯 设计原则
+### 场景 2：直接调用转发接口
 
-1. **简洁**: 专注核心功能，避免过度抽象
-2. **实用**: 解决实际业务问题，不追求技术炫技
-3. **鲁棒**: 处理边界情况，提供友好错误信息
-4. **易维护**: 清晰的代码结构，充分的注释说明
+```bash
+# 调用内部接口
+curl -X POST http://localhost:9009/api/runFlow \
+  -H "Content-Type: application/json" \
+  -d '{"flowId": "123", "action": "test"}'
 
-## 📝 使用示例
+# 调用开放接口
+curl -X POST http://localhost:9009/api/runFlow \
+  -H "Content-Type: application/json" \
+  -d '{"hostPre": "https://erp.tintan.net", "host": "erp.tintan.net", "data": "test"}'
 
-### 1. 上传Excel文件
-访问 http://localhost:9009/upload，选择Excel文件并设置参数。
-
-### 2. 批量处理
-系统自动将数据分批（默认200条/批）调用ERP接口。
-
-### 3. 测试模式
-开启测试模式可限制处理条数，便于验证数据映射效果。
+# 从文件读取数据
+curl -X POST http://localhost:9009/api/runFlow \
+  -H "Content-Type: application/json" \
+  -d '{"dataPath": "/path/to/data.json", "hostPre": "https://erp.tintan.net", "host": "erp.tintan.net"}'
+```
 
 ## 🛠️ 开发说明
 
 - **Node.js**: >= 16
 - **包管理器**: pnpm
-- **框架**: NestJS 10
-- **数据处理**: xlsx
-- **HTTP客户端**: axios
+- **框架**: NestJS 11
+- **HTTP 客户端**: @nestjs/axios + axios
+- **API 文档**: Swagger
+
+## 📝 环境变量说明
+
+| 变量名 | 说明 | 示例 |
+|--------|------|------|
+| NODE_ENV | 运行环境 | development / production |
+| PORT | 服务端口 | 9009 |
+| ERP_BASE_URL | ERP 基础 URL | https://erp.tintan.net |
+| ERP_AUTHORIZATION | 认证令牌 | Bearer eyJhbGc... |
+| ERP_APP_VERSION | 应用版本 | v1.1.97 |
+| ERP_RUN_FLOW_PATH | 内部接口路径 | /api/runFlow |
+| ERP_OPEN_RUN_FLOW_PATH | 开放接口路径 | /api/open/runFlow |
+| ERP_TIMEOUT | 请求超时时间（毫秒） | 100000 |
+
+## 🔍 日志说明
+
+服务会记录详细的请求和响应日志：
+
+```
+🚀 应用启动成功
+🌍 环境: DEVELOPMENT
+🔗 ERP: https://erp.tintan.net
+📊 服务: http://localhost:9009
+🔐 认证: ✅ 已配置
+
+[ErpService] 调用runFlow接口
+[ErpService] ERP API调用成功: {...}
+[ErpService] 调用成功
+```
 
 ## 📄 许可证
 

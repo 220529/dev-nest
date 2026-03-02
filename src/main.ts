@@ -13,7 +13,7 @@ async function bootstrap() {
     // Swagger 配置
     const config = new DocumentBuilder()
       .setTitle('Dev Nest API')
-      .setDescription('Excel数据处理和ERP接口转发服务')
+      .setDescription('ERP接口转发服务')
       .setVersion('1.0')
       .build();
     
@@ -28,7 +28,7 @@ async function bootstrap() {
     console.log(`🚀 应用启动成功`);
     console.log(`🌍 环境: ${configSummary.environment.toUpperCase()}`);
     console.log(`🔗 ERP: ${configSummary.baseUrl}`);
-    console.log(`📊 服务: http://localhost:${port}/upload`);
+    console.log(`📊 服务: http://localhost:${port}`);
     console.log(`🔐 认证: ${configSummary.hasAuthorization ? '✅ 已配置' : '❌ 未配置'}`);
     
   } catch (error) {
