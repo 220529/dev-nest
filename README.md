@@ -62,7 +62,9 @@ pnpm prod
 - 🌐 服务地址: http://localhost:9009
 - 📚 API 文档: http://localhost:9009/api
 
-## 🔧 VSCode RunOnSave 配置（仅 Windows）
+## 🔧 VSCode RunOnSave 配置（仅 Windows 需要）
+
+> **重要说明**：此配置仅适用于 Windows 系统。由于 Windows 系统存在命令行参数长度限制，需要通过此中转服务来处理。macOS 和 Linux 系统没有此限制，可以直接调用 ERP 接口，无需配置此服务。
 
 在你的 t1-code 项目中配置 `.vscode/settings.json`，实现保存文件时自动转发到 ERP：
 
@@ -92,13 +94,14 @@ pnpm prod
 ```
 
 **配置说明**：
-- `shell`: Git Bash 的路径（Windows 需要）
+- `shell`: Git Bash 的路径（Windows 系统必需）
 - `match`: 匹配要监听的文件路径模式
 - `isAsync`: 异步执行，不阻塞编辑器
 - `cmd`: 执行的脚本命令，需要根据你的 dev-nest 项目路径调整
 - 脚本会自动调用 `http://localhost:9009/api/runFlow` 进行转发
 
-**注意**：macOS 不需要配置 RunOnSave，直接启动 dev-nest 服务即可。
+**为什么需要这个中转服务？**
+Windows 系统的命令行参数长度有限制（约 8191 字符），当文件内容较大时，直接通过命令行参数传递会失败。此服务通过 HTTP 接口接收数据，绕过了这个限制。macOS 和 Linux 没有这个问题。
 
 ## 🔄 API 接口
 
