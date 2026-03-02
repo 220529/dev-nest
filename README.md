@@ -62,37 +62,9 @@ pnpm prod
 - 🌐 服务地址: http://localhost:9009
 - 📚 API 文档: http://localhost:9009/api
 
-## 🔧 VSCode RunOnSave 配置
+## 🔧 VSCode RunOnSave 配置（仅 Windows）
 
-在你的项目中配置 `.vscode/settings.json`，实现保存文件时自动转发到 ERP：
-
-### macOS/Linux 配置示例
-
-```json
-{
-  "emeraldwalk.runonsave": {
-    "commands": [
-      {
-        "match": "src/codeFlow/.*\\.js$",
-        "isAsync": true,
-        "cmd": "/Users/kaixin/main/dev-nest/scripts/runOnSave/saveCodeFlow.sh '${file}' '${workspaceFolder}'"
-      },
-      {
-        "match": "src/format/.*\\.js$",
-        "isAsync": true,
-        "cmd": "/Users/kaixin/main/dev-nest/scripts/runOnSave/saveFormat.sh '${file}' '${workspaceFolder}'"
-      },
-      {
-        "match": "src/jsonToPage/.*\\.json$",
-        "isAsync": true,
-        "cmd": "/Users/kaixin/main/dev-nest/scripts/runOnSave/saveJsonToPage.sh '${file}' '${workspaceFolder}'"
-      }
-    ]
-  }
-}
-```
-
-### Windows 配置示例
+在你的 t1-code 项目中配置 `.vscode/settings.json`，实现保存文件时自动转发到 ERP：
 
 ```json
 {
@@ -120,10 +92,13 @@ pnpm prod
 ```
 
 **配置说明**：
+- `shell`: Git Bash 的路径（Windows 需要）
 - `match`: 匹配要监听的文件路径模式
 - `isAsync`: 异步执行，不阻塞编辑器
-- `cmd`: 执行的脚本命令
+- `cmd`: 执行的脚本命令，需要根据你的 dev-nest 项目路径调整
 - 脚本会自动调用 `http://localhost:9009/api/runFlow` 进行转发
+
+**注意**：macOS 不需要配置 RunOnSave，直接启动 dev-nest 服务即可。
 
 ## 🔄 API 接口
 
