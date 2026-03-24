@@ -11,7 +11,7 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "start:prod": "dotenv -e .env -e .env.prod -- cross-env NODE_ENV=production node dist/main",
     "dev": "dotenv -e .env -e .env.dev -- cross-env NODE_ENV=development nest start --watch",
     "prod": "dotenv -e .env -e .env.prod -- cross-env NODE_ENV=production nest start --watch",
     "build:dev": "dotenv -e .env -e .env.dev -- cross-env NODE_ENV=development nest build",

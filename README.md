@@ -13,6 +13,7 @@ ERP 接口转发服务，基于 NestJS 构建。用于在 VSCode 中通过 RunOn
 ## 📋 快速开始
 
 ### 1. 安装依赖
+
 ```bash
 pnpm install
 ```
@@ -20,11 +21,13 @@ pnpm install
 ### 2. 配置环境变量
 
 **三层配置结构**：
+
 - `.env` - 基础共用配置（已提交）
-- `.env.dev` - 开发环境敏感配置（需创建）  
+- `.env.dev` - 开发环境敏感配置（需创建）
 - `.env.prod` - 生产环境敏感配置（需创建）
 
 **基础配置**（`.env`，已存在）:
+
 ```bash
 ERP_RUN_FLOW_PATH=/api/runFlow
 ERP_OPEN_RUN_FLOW_PATH=/api/open/runFlow
@@ -33,6 +36,7 @@ PORT=9009
 ```
 
 **创建开发环境配置**（`.env.dev`）:
+
 ```bash
 NODE_ENV=development
 ERP_BASE_URL=https://erp.tintan.net
@@ -41,6 +45,7 @@ ERP_APP_VERSION=v1.1.97
 ```
 
 **创建生产环境配置**（`.env.prod`）:
+
 ```bash
 NODE_ENV=production
 ERP_BASE_URL=https://erp.tone.top
@@ -59,6 +64,7 @@ pnpm prod
 ```
 
 ### 4. 验证服务
+
 - 🌐 服务地址: http://localhost:9009
 - 📚 API 文档: http://localhost:9009/api
 
@@ -94,6 +100,7 @@ pnpm prod
 ```
 
 **配置说明**：
+
 - `shell`: Git Bash 的路径（Windows 系统必需）
 - `match`: 匹配要监听的文件路径模式
 - `isAsync`: 异步执行，不阻塞编辑器
@@ -110,6 +117,7 @@ Windows 系统的命令行参数长度有限制（约 8191 字符），当文件
 ERP 转发服务的核心接口，根据请求参数自动选择目标 API。
 
 **请求参数**：
+
 ```typescript
 {
   dataPath?: string;    // 可选：文件路径，读取文件内容作为数据
@@ -120,11 +128,13 @@ ERP 转发服务的核心接口，根据请求参数自动选择目标 API。
 ```
 
 **转发逻辑**：
+
 1. 如果包含 `dataPath`：读取文件内容，转发到开放接口
 2. 如果包含 `hostPre`：转发到指定主机的开放接口
 3. 否则：转发到内部 RunFlow API
 
 **响应格式**：
+
 ```typescript
 // 成功
 {
@@ -137,6 +147,39 @@ ERP 转发服务的核心接口，根据请求参数自动选择目标 API。
   statusCode?: number;
   message?: any;
 }
+```
+
+### POST /api/excel/parse
+
+上传 Excel 文件并解析为 JSON，适合做导入预览或后续数据处理。
+
+**请求方式**：
+
+- `Content-Type: multipart/form-data`
+- 表单字段名：`file`
+- 支持格式：`xlsx`、`xls`、`csv`
+- 文件大小限制：10MB
+
+**响应格式**：
+
+```typescript
+{
+  fileName: string;
+  sheetCount: number;
+  sheets: Array<{
+    sheetName: string;
+    rowCount: number;
+    headers: string[];
+    rows: Record<string, any>[];
+  }>;
+}
+```
+
+**调用示例**：
+
+```bash
+curl -X POST http://localhost:9009/api/excel/parse \
+  -F "file=@/path/to/example.xlsx"
 ```
 
 ## 📁 项目结构
@@ -201,16 +244,16 @@ curl -X POST http://localhost:9009/api/runFlow \
 
 ## 📝 环境变量说明
 
-| 变量名 | 说明 | 示例 |
-|--------|------|------|
-| NODE_ENV | 运行环境 | development / production |
-| PORT | 服务端口 | 9009 |
-| ERP_BASE_URL | ERP 基础 URL | https://erp.tintan.net |
-| ERP_AUTHORIZATION | 认证令牌 | Bearer eyJhbGc... |
-| ERP_APP_VERSION | 应用版本 | v1.1.97 |
-| ERP_RUN_FLOW_PATH | 内部接口路径 | /api/runFlow |
-| ERP_OPEN_RUN_FLOW_PATH | 开放接口路径 | /api/open/runFlow |
-| ERP_TIMEOUT | 请求超时时间（毫秒） | 100000 |
+| 变量名                 | 说明                 | 示例                     |
+| ---------------------- | -------------------- | ------------------------ |
+| NODE_ENV               | 运行环境             | development / production |
+| PORT                   | 服务端口             | 9009                     |
+| ERP_BASE_URL           | ERP 基础 URL         | https://erp.tintan.net   |
+| ERP_AUTHORIZATION      | 认证令牌             | Bearer eyJhbGc...        |
+| ERP_APP_VERSION        | 应用版本             | v1.1.97                  |
+| ERP_RUN_FLOW_PATH      | 内部接口路径         | /api/runFlow             |
+| ERP_OPEN_RUN_FLOW_PATH | 开放接口路径         | /api/open/runFlow        |
+| ERP_TIMEOUT            | 请求超时时间（毫秒） | 100000                   |
 
 ## 🔍 日志说明
 

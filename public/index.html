@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Excel 结算数据工具</title>
+    <style>
+      :root {
+        --bg: #f4efe7;
+        --panel: rgba(255, 252, 247, 0.9);
+        --ink: #1f1d1a;
+        --muted: #6a6257;
+        --line: rgba(31, 29, 26, 0.12);
+        --accent: #b54d2d;
+        --accent-strong: #8d3318;
+        --accent-soft: rgba(181, 77, 45, 0.12);
+        --success: #1f7a4d;
+        --error: #b42318;
+        --shadow: 0 24px 60px rgba(55, 35, 19, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: 'PingFang SC', 'Noto Sans SC', sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(
+            circle at top left,
+            rgba(181, 77, 45, 0.18),
+            transparent 28%
+          ),
+          radial-gradient(
+            circle at right center,
+            rgba(210, 165, 92, 0.2),
+            transparent 24%
+          ),
+          linear-gradient(160deg, #f8f1e7 0%, #f2ece2 52%, #ece6dd 100%);
+      }
+
+      .shell {
+        width: min(1120px, calc(100% - 32px));
+        margin: 32px auto;
+        display: grid;
+        gap: 16px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+      }
+
+      .page-title {
+        margin: 0;
+        font-size: clamp(26px, 4vw, 36px);
+        line-height: 1;
+        letter-spacing: -0.04em;
+      }
+
+      .panel {
+        padding: 20px;
+      }
+
+      form {
+        display: grid;
+        gap: 18px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      label {
+        display: grid;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      input,
+      select,
+      textarea,
+      button {
+        font: inherit;
+      }
+
+      input[type='file'],
+      input[type='text'],
+      select,
+      textarea {
+        width: 100%;
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.86);
+        color: var(--ink);
+      }
+
+      textarea {
+        min-height: 280px;
+        resize: vertical;
+        font-family: 'SFMono-Regular', 'Consolas', monospace;
+        line-height: 1.6;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 16px;
+        padding: 14px 20px;
+        cursor: pointer;
+        transition:
+          transform 0.15s ease,
+          opacity 0.15s ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      input:disabled,
+      select:disabled,
+      textarea:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+
+      .primary {
+        background: linear-gradient(
+          135deg,
+          var(--accent) 0%,
+          var(--accent-strong) 100%
+        );
+        color: #fff;
+      }
+
+      .secondary {
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+      }
+
+      .status {
+        min-height: 24px;
+        font-size: 14px;
+      }
+
+      .status.success {
+        color: var(--success);
+      }
+
+      .status.error {
+        color: var(--error);
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .card {
+        padding: 18px;
+        border-radius: 20px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.8);
+      }
+
+      .card small {
+        display: block;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+
+      .card strong {
+        font-size: 24px;
+        letter-spacing: -0.04em;
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      pre {
+        margin: 0;
+        max-height: 480px;
+        overflow: auto;
+        padding: 18px;
+        border-radius: 20px;
+        background: #171512;
+        color: #f6ead8;
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      @media (max-width: 900px) {
+        .grid,
+        .controls,
+        .summary {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="panel">
+        <h1 class="page-title">Excel 分批调用新结算</h1>
+        <form id="excel-form">
+          <div class="grid">
+            <label>
+              Excel 文件
+              <input
+                id="file"
+                name="file"
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                required
+              />
+            </label>
+            <label>
+              runFlow JSON
+              <textarea id="runflow-json" name="runflow-json" rows="12">{
+  "flowKey": "am0xuhyt9p6mfcat",
+  "action": "sync_input_supplier_settlement_finance",
+  "debug": true
+}</textarea>
+            </label>
+          </div>
+
+          <div class="controls">
+            <label>
+              每批条数
+              <select id="batch-size" name="batch-size">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="30">30</option>
+                <option value="40">40</option>
+                <option value="50">50</option>
+                <option value="60">60</option>
+                <option value="70">70</option>
+                <option value="80">80</option>
+                <option value="90">90</option>
+                <option value="100">100</option>
+              </select>
+            </label>
+            <label>
+              批次间隔秒数
+              <input
+                id="pause-seconds"
+                name="pause-seconds"
+                type="number"
+                min="0"
+                step="1"
+                value="3"
+              />
+            </label>
+          </div>
+
+          <div class="actions">
+            <button class="secondary" type="button" id="preview-btn">
+              解析预览
+            </button>
+            <button class="secondary" type="button" id="test-first-btn">
+              测试首单
+            </button>
+            <button class="primary" type="button" id="run-btn">
+              开始分批调用
+            </button>
+            <button class="secondary" type="button" id="pause-btn" disabled>
+              暂停
+            </button>
+          </div>
+
+          <div id="status" class="status"></div>
+        </form>
+      </section>
+
+      <section id="summary-panel" class="panel hidden">
+        <div class="summary">
+          <div class="card">
+            <small>订单数</small>
+            <strong id="orderTotal">-</strong>
+          </div>
+          <div class="card">
+            <small>结算单数</small>
+            <strong id="settlementTotal">-</strong>
+          </div>
+          <div class="card">
+            <small>有效明细行数</small>
+            <strong id="detailRowTotal">-</strong>
+          </div>
+          <div class="card">
+            <small>工作表</small>
+            <strong id="worksheetName">-</strong>
+          </div>
+        </div>
+      </section>
+
+      <section id="result-panel" class="panel hidden">
+        <pre id="result"></pre>
+      </section>
+
+      <section id="log-panel" class="panel">
+        <pre id="log-output">等待开始...</pre>
+      </section>
+    </main>
+
+    <script>
+      const form = document.getElementById('excel-form');
+      const fileInput = document.getElementById('file');
+      const runflowJsonInput = document.getElementById('runflow-json');
+      const batchSizeInput = document.getElementById('batch-size');
+      const pauseSecondsInput = document.getElementById('pause-seconds');
+      const previewButton = document.getElementById('preview-btn');
+      const testFirstButton = document.getElementById('test-first-btn');
+      const runButton = document.getElementById('run-btn');
+      const pauseButton = document.getElementById('pause-btn');
+      const statusNode = document.getElementById('status');
+      const resultPanel = document.getElementById('result-panel');
+      const summaryPanel = document.getElementById('summary-panel');
+      const resultNode = document.getElementById('result');
+      const logOutputNode = document.getElementById('log-output');
+      let lastSummary = null;
+      let parsedRows = [];
+      let isRunning = false;
+      let isPaused = false;
+      let resumeResolver = null;
+
+      const setStatus = (message, type = '') => {
+        statusNode.textContent = message || '';
+        statusNode.className = 'status' + (type ? ' ' + type : '');
+      };
+
+      const fillSummary = (summary) => {
+        lastSummary = summary || null;
+        if (!summary) {
+          summaryPanel.classList.add('hidden');
+          return;
+        }
+
+        summaryPanel.classList.remove('hidden');
+        document.getElementById('orderTotal').textContent =
+          summary.orderTotal ?? '-';
+        document.getElementById('settlementTotal').textContent =
+          summary.settlementTotal ?? '-';
+        document.getElementById('detailRowTotal').textContent =
+          summary.detailRowTotal ?? '-';
+        document.getElementById('worksheetName').textContent =
+          summary.worksheetName ?? '-';
+      };
+
+      const showResult = (payload) => {
+        resultPanel.classList.remove('hidden');
+        resultNode.textContent = JSON.stringify(payload, null, 2);
+      };
+
+      const appendLog = (message) => {
+        const line = `[${new Date().toLocaleTimeString('zh-CN', {
+          hour12: false,
+        })}] ${message}`;
+        if (logOutputNode.textContent === '等待开始...') {
+          logOutputNode.textContent = line;
+        } else {
+          logOutputNode.textContent += `\n${line}`;
+        }
+        logOutputNode.scrollTop = logOutputNode.scrollHeight;
+      };
+
+      const clearLog = () => {
+        logOutputNode.textContent = '等待开始...';
+      };
+
+      const sleep = (ms) =>
+        new Promise((resolve) => {
+          window.setTimeout(resolve, ms);
+        });
+
+      const updatePauseButton = () => {
+        pauseButton.disabled = !isRunning;
+        pauseButton.textContent = isPaused ? '继续' : '暂停';
+      };
+
+      const waitIfPaused = async () => {
+        if (!isPaused) {
+          return;
+        }
+
+        await new Promise((resolve) => {
+          resumeResolver = resolve;
+        });
+      };
+
+      const waitWithPause = async (ms) => {
+        let remaining = ms;
+        while (remaining > 0) {
+          await waitIfPaused();
+          const step = Math.min(remaining, 250);
+          await sleep(step);
+          remaining -= step;
+        }
+      };
+
+      const buildFormData = () => {
+        const file = fileInput.files[0];
+        if (!file) {
+          throw new Error('请先选择 Excel 文件');
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+        return formData;
+      };
+
+      const request = async (url, formData) => {
+        const response = await fetch(url, {
+          method: 'POST',
+          body: formData,
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.message || '请求失败');
+        }
+        return payload;
+      };
+
+      const requestJson = async (url, payload) => {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.message || '请求失败');
+        }
+        return result;
+      };
+
+      const buildRunFlowPayload = () => {
+        const raw = runflowJsonInput.value.trim();
+        if (!raw) {
+          throw new Error('runFlow JSON 不能为空');
+        }
+
+        let payload;
+        try {
+          payload = JSON.parse(raw);
+        } catch (_error) {
+          throw new Error('runFlow JSON 格式不正确');
+        }
+
+        if (!payload || Array.isArray(payload) || typeof payload !== 'object') {
+          throw new Error('runFlow JSON 必须是对象');
+        }
+
+        if (
+          String(payload.action || '').trim() !==
+          'sync_input_supplier_settlement_finance'
+        ) {
+          throw new Error(
+            '当前页面按 Excel 分批注入 rows，action 必须是 sync_input_supplier_settlement_finance',
+          );
+        }
+
+        return payload;
+      };
+
+      const getBatchSize = () => {
+        const batchSize = Number(batchSizeInput.value);
+        if (!Number.isInteger(batchSize) || batchSize < 10 || batchSize > 100) {
+          throw new Error('每批条数必须在 10 到 100 之间');
+        }
+        return batchSize;
+      };
+
+      const getPauseSeconds = () => {
+        const pauseSeconds = Number(pauseSecondsInput.value);
+        if (!Number.isFinite(pauseSeconds) || pauseSeconds < 0) {
+          throw new Error('批次间隔秒数必须大于等于 0');
+        }
+        return pauseSeconds;
+      };
+
+      const runSingleBatch = async (
+        basePayload,
+        rows,
+        label,
+        batchNo,
+        totalBatches,
+        range,
+        pauseSeconds = 0,
+      ) => {
+        appendLog(`${label}开始，本批 ${rows.length} 条`);
+        const startedAt = Date.now();
+        const runFlowResult = await requestJson('/api/runFlow', {
+          ...basePayload,
+          rows,
+          _clientMeta: {
+            pageNo: batchNo,
+            totalPages: totalBatches,
+            start: range.start,
+            end: range.end,
+          },
+        });
+        const elapsedSeconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+        showResult(runFlowResult);
+        appendLog(`${label}完成，耗时 ${elapsedSeconds} 秒`);
+
+        if (pauseSeconds > 0 && totalBatches > 1) {
+          appendLog(`暂停 ${pauseSeconds} 秒后继续下一批`);
+          await waitWithPause(pauseSeconds * 1000);
+        }
+
+        return runFlowResult;
+      };
+
+      const withLoading = async (handler) => {
+        isRunning = true;
+        isPaused = false;
+        updatePauseButton();
+        previewButton.disabled = true;
+        testFirstButton.disabled = true;
+        runButton.disabled = true;
+        batchSizeInput.disabled = true;
+        pauseSecondsInput.disabled = true;
+        runflowJsonInput.disabled = true;
+        fileInput.disabled = true;
+        setStatus('处理中...', '');
+
+        try {
+          await handler();
+        } catch (error) {
+          setStatus(error.message || '处理失败', 'error');
+        } finally {
+          isRunning = false;
+          isPaused = false;
+          resumeResolver = null;
+          updatePauseButton();
+          previewButton.disabled = false;
+          testFirstButton.disabled = false;
+          runButton.disabled = false;
+          batchSizeInput.disabled = false;
+          pauseSecondsInput.disabled = false;
+          runflowJsonInput.disabled = false;
+          fileInput.disabled = false;
+        }
+      };
+
+      previewButton.addEventListener('click', () =>
+        withLoading(async () => {
+          appendLog('开始解析 Excel');
+          const payload = await request('/api/excel/parse', buildFormData());
+          parsedRows = Array.isArray(payload.data) ? payload.data : [];
+          fillSummary(payload.summary);
+          showResult(payload);
+          appendLog(
+            `解析完成，订单数 ${payload.summary?.orderTotal ?? '-'}，结算单数 ${payload.summary?.settlementTotal ?? '-'}，可执行行数 ${parsedRows.length}`,
+          );
+          setStatus('解析完成，可以开始分批调用 runFlow。', 'success');
+        }),
+      );
+
+      testFirstButton.addEventListener('click', () =>
+        withLoading(async () => {
+          const basePayload = buildRunFlowPayload();
+
+          if (!parsedRows.length) {
+            throw new Error('请先点击“解析预览”，拿到 Excel 数据后再测试首单');
+          }
+
+          clearLog();
+          appendLog('开始测试首单');
+          const firstRow = [parsedRows[0]];
+          const runFlowResult = await runSingleBatch(
+            basePayload,
+            firstRow,
+            '首单测试',
+            1,
+            1,
+            {
+              start: 1,
+              end: 1,
+            },
+          );
+          showResult(runFlowResult);
+          appendLog('首单测试完成');
+          setStatus('首单测试完成。', 'success');
+        }),
+      );
+
+      runButton.addEventListener('click', () =>
+        withLoading(async () => {
+          const basePayload = buildRunFlowPayload();
+          const batchSize = getBatchSize();
+          const pauseSeconds = getPauseSeconds();
+          const totalItems = parsedRows.length;
+
+          if (!Number.isInteger(totalItems) || totalItems <= 0) {
+            throw new Error('请先点击“解析预览”，拿到 Excel 数据后再分批调用');
+          }
+
+          clearLog();
+          appendLog(`开始执行，总条数 ${totalItems}，每批 ${batchSize} 条，间隔 ${pauseSeconds} 秒`);
+
+          const totalBatches = Math.ceil(totalItems / batchSize);
+          let lastResult = null;
+
+          for (let batchNo = 1; batchNo <= totalBatches; batchNo += 1) {
+            await waitIfPaused();
+            const start = (batchNo - 1) * batchSize + 1;
+            const end = Math.min(batchNo * batchSize, totalItems);
+            const batchRows = parsedRows.slice(start - 1, end);
+            lastResult = await runSingleBatch(
+              basePayload,
+              batchRows,
+              `第 ${batchNo}/${totalBatches} 批，处理范围 ${start}-${end}，`,
+              batchNo,
+              totalBatches,
+              {
+                start,
+                end,
+              },
+              batchNo < totalBatches ? pauseSeconds : 0,
+            );
+          }
+
+          if (lastResult) {
+            showResult(lastResult);
+          }
+          appendLog(`全部批次执行完成，共 ${totalBatches} 批`);
+          setStatus(`/api/runFlow 分批调用完成，共 ${totalBatches} 批。`, 'success');
+        }),
+      );
+
+      pauseButton.addEventListener('click', () => {
+        if (!isRunning) {
+          return;
+        }
+
+        if (isPaused) {
+          isPaused = false;
+          appendLog('继续执行');
+          setStatus('继续执行中...', '');
+          const resolve = resumeResolver;
+          resumeResolver = null;
+          updatePauseButton();
+          if (resolve) {
+            resolve();
+          }
+          return;
+        }
+
+        isPaused = true;
+        updatePauseButton();
+        appendLog('已暂停，等待继续');
+        setStatus('已暂停，点击“继续”后执行下一批。', '');
+      });
+
+      form.addEventListener('submit', (event) => event.preventDefault());
+    </script>
+  </body>
+</html>

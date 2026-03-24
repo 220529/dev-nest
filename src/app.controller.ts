@@ -2,8 +2,8 @@ import { Controller, Get } from '@nestjs/common';
 
 @Controller()
 export class AppController {
-  @Get()
+  @Get('health')
   getHello(): string {
-    return 'ERP接口转发服务';
+    return 'OK';
   }
 }
