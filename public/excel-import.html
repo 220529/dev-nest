@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Excel 结算数据工具</title>
+    <title>Excel 导入执行台</title>
     <style>
       :root {
         --bg: #f4efe7;
@@ -229,7 +229,7 @@
   <body>
     <main class="shell">
       <section class="panel">
-        <h1 class="page-title">Excel 分批调用新结算</h1>
+        <h1 class="page-title">Excel 导入执行台</h1>
         <form id="excel-form">
           <div class="grid">
             <label>
@@ -243,12 +243,32 @@
               />
             </label>
             <label>
-              runFlow JSON
-              <textarea id="runflow-json" name="runflow-json" rows="12">{
+              执行参数 JSON
+              <textarea id="runflow-json" name="runflow-json" rows="12">
+{
   "flowKey": "am0xuhyt9p6mfcat",
   "action": "sync_input_supplier_settlement_finance",
   "debug": true
-}</textarea>
+}</textarea
+              >
+            </label>
+          </div>
+
+          <div class="controls">
+            <label>
+              导入场景
+              <select id="scene" name="scene">
+                <option value="supplier-settlement" selected>
+                  供应商结算导入
+                </option>
+              </select>
+            </label>
+            <label>
+              执行模式
+              <select id="mode" name="mode">
+                <option value="chunked" selected>分批执行</option>
+                <option value="full">一次执行</option>
+              </select>
             </label>
           </div>
 
@@ -256,28 +276,55 @@
             <label>
               每批条数
               <select id="batch-size" name="batch-size">
-                <option value="10">10</option>
                 <option value="20" selected>20</option>
                 <option value="30">30</option>
                 <option value="40">40</option>
                 <option value="50">50</option>
-                <option value="60">60</option>
-                <option value="70">70</option>
-                <option value="80">80</option>
-                <option value="90">90</option>
                 <option value="100">100</option>
               </select>
             </label>
             <label>
-              批次间隔秒数
+              工作表名称
               <input
-                id="pause-seconds"
-                name="pause-seconds"
-                type="number"
-                min="0"
-                step="1"
-                value="3"
+                id="sheet-name"
+                name="sheet-name"
+                type="text"
+                placeholder="留空默认第一张"
               />
+            </label>
+          </div>
+
+          <div class="controls">
+            <label>
+              失败后继续
+              <select id="continue-on-error" name="continue-on-error">
+                <option value="false" selected>否</option>
+                <option value="true">是</option>
+              </select>
+            </label>
+            <label>
+              测试条数
+              <select id="test-count" name="test-count">
+                <option value="1" selected>1 条</option>
+                <option value="3">3 条</option>
+                <option value="5">5 条</option>
+                <option value="10">10 条</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="controls">
+            <label>
+              说明
+              <input
+                type="text"
+                value="预览走导入接口，执行直接按批调用 runFlow"
+                disabled
+              />
+            </label>
+            <label>
+              当前状态
+              <input id="run-state" type="text" value="空闲" disabled />
             </label>
           </div>
 
@@ -285,12 +332,10 @@
             <button class="secondary" type="button" id="preview-btn">
               解析预览
             </button>
-            <button class="secondary" type="button" id="test-first-btn">
-              测试首单
+            <button class="secondary" type="button" id="test-btn">
+              先测几条
             </button>
-            <button class="primary" type="button" id="run-btn">
-              开始分批调用
-            </button>
+            <button class="primary" type="button" id="run-btn">开始执行</button>
             <button class="secondary" type="button" id="pause-btn" disabled>
               暂停
             </button>
@@ -334,22 +379,30 @@
       const form = document.getElementById('excel-form');
       const fileInput = document.getElementById('file');
       const runflowJsonInput = document.getElementById('runflow-json');
+      const sceneInput = document.getElementById('scene');
+      const modeInput = document.getElementById('mode');
       const batchSizeInput = document.getElementById('batch-size');
-      const pauseSecondsInput = document.getElementById('pause-seconds');
+      const sheetNameInput = document.getElementById('sheet-name');
+      const continueOnErrorInput = document.getElementById('continue-on-error');
+      const testCountInput = document.getElementById('test-count');
       const previewButton = document.getElementById('preview-btn');
-      const testFirstButton = document.getElementById('test-first-btn');
+      const testButton = document.getElementById('test-btn');
       const runButton = document.getElementById('run-btn');
       const pauseButton = document.getElementById('pause-btn');
       const statusNode = document.getElementById('status');
+      const runStateNode = document.getElementById('run-state');
       const resultPanel = document.getElementById('result-panel');
       const summaryPanel = document.getElementById('summary-panel');
       const resultNode = document.getElementById('result');
       const logOutputNode = document.getElementById('log-output');
-      let lastSummary = null;
-      let parsedRows = [];
       let isRunning = false;
       let isPaused = false;
       let resumeResolver = null;
+      let parsedRows = [];
+      const modeLabelMap = {
+        chunked: '分批执行',
+        full: '一次执行',
+      };
 
       const setStatus = (message, type = '') => {
         statusNode.textContent = message || '';
@@ -357,7 +410,6 @@
       };
 
       const fillSummary = (summary) => {
-        lastSummary = summary || null;
         if (!summary) {
           summaryPanel.classList.add('hidden');
           return;
@@ -395,37 +447,7 @@
         logOutputNode.textContent = '等待开始...';
       };
 
-      const sleep = (ms) =>
-        new Promise((resolve) => {
-          window.setTimeout(resolve, ms);
-        });
-
-      const updatePauseButton = () => {
-        pauseButton.disabled = !isRunning;
-        pauseButton.textContent = isPaused ? '继续' : '暂停';
-      };
-
-      const waitIfPaused = async () => {
-        if (!isPaused) {
-          return;
-        }
-
-        await new Promise((resolve) => {
-          resumeResolver = resolve;
-        });
-      };
-
-      const waitWithPause = async (ms) => {
-        let remaining = ms;
-        while (remaining > 0) {
-          await waitIfPaused();
-          const step = Math.min(remaining, 250);
-          await sleep(step);
-          remaining -= step;
-        }
-      };
-
-      const buildFormData = () => {
+      const buildBaseFormData = () => {
         const file = fileInput.files[0];
         if (!file) {
           throw new Error('请先选择 Excel 文件');
@@ -433,6 +455,23 @@
 
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('scene', sceneInput.value);
+
+        const mode = modeInput.value;
+        if (mode) {
+          formData.append('mode', mode);
+        }
+
+        const chunkSize = batchSizeInput.value;
+        if (chunkSize) {
+          formData.append('chunkSize', chunkSize);
+        }
+
+        const sheetName = sheetNameInput.value.trim();
+        if (sheetName) {
+          formData.append('sheetName', sheetName);
+        }
+
         return formData;
       };
 
@@ -463,21 +502,42 @@
         return result;
       };
 
-      const buildRunFlowPayload = () => {
+      const buildPreviewFormData = () => buildBaseFormData();
+
+      const buildRunFlowPayloadText = () => {
         const raw = runflowJsonInput.value.trim();
         if (!raw) {
-          throw new Error('runFlow JSON 不能为空');
+          throw new Error('执行参数 JSON 不能为空');
         }
 
+        try {
+          const payload = JSON.parse(raw);
+          if (
+            !payload ||
+            Array.isArray(payload) ||
+            typeof payload !== 'object'
+          ) {
+            throw new Error('执行参数 JSON 必须是对象');
+          }
+        } catch (error) {
+          if (
+            error instanceof Error &&
+            error.message === '执行参数 JSON 必须是对象'
+          ) {
+            throw error;
+          }
+          throw new Error('执行参数 JSON 格式不正确');
+        }
+
+        return raw;
+      };
+
+      const buildRunFlowPayload = () => {
         let payload;
         try {
-          payload = JSON.parse(raw);
-        } catch (_error) {
-          throw new Error('runFlow JSON 格式不正确');
-        }
-
-        if (!payload || Array.isArray(payload) || typeof payload !== 'object') {
-          throw new Error('runFlow JSON 必须是对象');
+          payload = JSON.parse(buildRunFlowPayloadText());
+        } catch (error) {
+          throw error;
         }
 
         if (
@@ -485,7 +545,7 @@
           'sync_input_supplier_settlement_finance'
         ) {
           throw new Error(
-            '当前页面按 Excel 分批注入 rows，action 必须是 sync_input_supplier_settlement_finance',
+            '当前页面用于结算导入，action 必须是 sync_input_supplier_settlement_finance',
           );
         }
 
@@ -494,64 +554,157 @@
 
       const getBatchSize = () => {
         const batchSize = Number(batchSizeInput.value);
-        if (!Number.isInteger(batchSize) || batchSize < 10 || batchSize > 100) {
-          throw new Error('每批条数必须在 10 到 100 之间');
+        if (!Number.isInteger(batchSize) || batchSize <= 0) {
+          throw new Error('每批条数必须是正整数');
         }
         return batchSize;
       };
 
-      const getPauseSeconds = () => {
-        const pauseSeconds = Number(pauseSecondsInput.value);
-        if (!Number.isFinite(pauseSeconds) || pauseSeconds < 0) {
-          throw new Error('批次间隔秒数必须大于等于 0');
+      const getTestCount = () => {
+        const testCount = Number(testCountInput.value);
+        if (!Number.isInteger(testCount) || testCount <= 0) {
+          throw new Error('测试条数必须是正整数');
         }
-        return pauseSeconds;
+        return testCount;
       };
 
-      const runSingleBatch = async (
+      const updateRunState = (message) => {
+        runStateNode.value = message;
+      };
+
+      const updatePauseButton = () => {
+        pauseButton.disabled = !isRunning;
+        pauseButton.textContent = isPaused ? '继续' : '暂停';
+      };
+
+      const waitIfPaused = async () => {
+        if (!isPaused) {
+          return;
+        }
+
+        await new Promise((resolve) => {
+          resumeResolver = resolve;
+        });
+      };
+
+      const runBatch = async ({
         basePayload,
         rows,
-        label,
         batchNo,
         totalBatches,
-        range,
-        pauseSeconds = 0,
-      ) => {
-        appendLog(`${label}开始，本批 ${rows.length} 条`);
+        start,
+        end,
+      }) => {
+        appendLog(
+          `第 ${batchNo}/${totalBatches} 批开始，范围 ${start}-${end}，共 ${rows.length} 条`,
+        );
         const startedAt = Date.now();
-        const runFlowResult = await requestJson('/api/runFlow', {
+        const result = await requestJson('/api/runFlow', {
           ...basePayload,
           rows,
           _clientMeta: {
             pageNo: batchNo,
             totalPages: totalBatches,
-            start: range.start,
-            end: range.end,
+            start,
+            end,
           },
         });
-        const elapsedSeconds = ((Date.now() - startedAt) / 1000).toFixed(1);
-        showResult(runFlowResult);
-        appendLog(`${label}完成，耗时 ${elapsedSeconds} 秒`);
+        const durationMs = Date.now() - startedAt;
+        showResult(result);
+        appendLog(`第 ${batchNo}/${totalBatches} 批完成，耗时 ${durationMs}ms`);
+        return result;
+      };
 
-        if (pauseSeconds > 0 && totalBatches > 1) {
-          appendLog(`暂停 ${pauseSeconds} 秒后继续下一批`);
-          await waitWithPause(pauseSeconds * 1000);
+      const ensurePreviewRows = async () => {
+        if (parsedRows.length > 0) {
+          return;
         }
 
-        return runFlowResult;
+        appendLog('未发现预览数据，自动先解析一次');
+        const payload = await request(
+          '/api/import/preview',
+          buildPreviewFormData(),
+        );
+        parsedRows = Array.isArray(payload.rows) ? payload.rows : [];
+        fillSummary(payload.summary);
+        showResult(payload);
+      };
+
+      const runRows = async (rows, label) => {
+        const basePayload = buildRunFlowPayload();
+        const mode = modeInput.value;
+
+        if (!rows.length) {
+          throw new Error('没有可执行的数据，请先解析预览');
+        }
+
+        clearLog();
+        appendLog(`${label}开始，共 ${rows.length} 条`);
+
+        if (mode === 'full') {
+          updateRunState('执行中');
+          await runBatch({
+            basePayload,
+            rows,
+            batchNo: 1,
+            totalBatches: 1,
+            start: 1,
+            end: rows.length,
+          });
+          appendLog(`${label}完成，共 1 批`);
+          return;
+        }
+
+        const batchSize = getBatchSize();
+        const totalBatches = Math.ceil(rows.length / batchSize);
+        const continueOnError = continueOnErrorInput.value === 'true';
+
+        for (let batchNo = 1; batchNo <= totalBatches; batchNo += 1) {
+          await waitIfPaused();
+          updateRunState(isPaused ? '已暂停' : '执行中');
+          const start = (batchNo - 1) * batchSize + 1;
+          const end = Math.min(batchNo * batchSize, rows.length);
+          const batchRows = rows.slice(start - 1, end);
+
+          try {
+            await runBatch({
+              basePayload,
+              rows: batchRows,
+              batchNo,
+              totalBatches,
+              start,
+              end,
+            });
+          } catch (error) {
+            appendLog(
+              `第 ${batchNo}/${totalBatches} 批失败：${error.message || '未知错误'}`,
+            );
+            if (!continueOnError) {
+              throw error;
+            }
+          }
+        }
+
+        appendLog(`${label}完成，共 ${totalBatches} 批`);
       };
 
       const withLoading = async (handler) => {
         isRunning = true;
         isPaused = false;
-        updatePauseButton();
+        resumeResolver = null;
         previewButton.disabled = true;
-        testFirstButton.disabled = true;
+        testButton.disabled = true;
         runButton.disabled = true;
+        sceneInput.disabled = true;
+        modeInput.disabled = true;
         batchSizeInput.disabled = true;
-        pauseSecondsInput.disabled = true;
+        sheetNameInput.disabled = true;
+        continueOnErrorInput.disabled = true;
+        testCountInput.disabled = true;
         runflowJsonInput.disabled = true;
         fileInput.disabled = true;
+        updatePauseButton();
+        updateRunState('处理中');
         setStatus('处理中...', '');
 
         try {
@@ -562,100 +715,55 @@
           isRunning = false;
           isPaused = false;
           resumeResolver = null;
-          updatePauseButton();
           previewButton.disabled = false;
-          testFirstButton.disabled = false;
+          testButton.disabled = false;
           runButton.disabled = false;
+          sceneInput.disabled = false;
+          modeInput.disabled = false;
           batchSizeInput.disabled = false;
-          pauseSecondsInput.disabled = false;
+          sheetNameInput.disabled = false;
+          continueOnErrorInput.disabled = false;
+          testCountInput.disabled = false;
           runflowJsonInput.disabled = false;
           fileInput.disabled = false;
+          updatePauseButton();
+          updateRunState('空闲');
         }
       };
 
       previewButton.addEventListener('click', () =>
         withLoading(async () => {
+          getBatchSize();
           appendLog('开始解析 Excel');
-          const payload = await request('/api/excel/parse', buildFormData());
-          parsedRows = Array.isArray(payload.data) ? payload.data : [];
+          const payload = await request(
+            '/api/import/preview',
+            buildPreviewFormData(),
+          );
+          parsedRows = Array.isArray(payload.rows) ? payload.rows : [];
           fillSummary(payload.summary);
           showResult(payload);
           appendLog(
-            `解析完成，订单数 ${payload.summary?.orderTotal ?? '-'}，结算单数 ${payload.summary?.settlementTotal ?? '-'}，可执行行数 ${parsedRows.length}`,
+            `解析完成，模式 ${modeLabelMap[payload.summary?.mode] ?? '-'}，可执行条数 ${payload.summary?.totalItems ?? 0}，总批次 ${payload.summary?.totalBatches ?? 0}`,
           );
-          setStatus('解析完成，可以开始分批调用 runFlow。', 'success');
+          setStatus('解析完成，可以开始执行。', 'success');
         }),
       );
 
-      testFirstButton.addEventListener('click', () =>
+      testButton.addEventListener('click', () =>
         withLoading(async () => {
-          const basePayload = buildRunFlowPayload();
-
-          if (!parsedRows.length) {
-            throw new Error('请先点击“解析预览”，拿到 Excel 数据后再测试首单');
-          }
-
-          clearLog();
-          appendLog('开始测试首单');
-          const firstRow = [parsedRows[0]];
-          const runFlowResult = await runSingleBatch(
-            basePayload,
-            firstRow,
-            '首单测试',
-            1,
-            1,
-            {
-              start: 1,
-              end: 1,
-            },
-          );
-          showResult(runFlowResult);
-          appendLog('首单测试完成');
-          setStatus('首单测试完成。', 'success');
+          await ensurePreviewRows();
+          const testCount = getTestCount();
+          const rows = parsedRows.slice(0, testCount);
+          await runRows(rows, `测试前 ${rows.length} 条`);
+          setStatus(`测试完成，共执行 ${rows.length} 条。`, 'success');
         }),
       );
 
       runButton.addEventListener('click', () =>
         withLoading(async () => {
-          const basePayload = buildRunFlowPayload();
-          const batchSize = getBatchSize();
-          const pauseSeconds = getPauseSeconds();
-          const totalItems = parsedRows.length;
-
-          if (!Number.isInteger(totalItems) || totalItems <= 0) {
-            throw new Error('请先点击“解析预览”，拿到 Excel 数据后再分批调用');
-          }
-
-          clearLog();
-          appendLog(`开始执行，总条数 ${totalItems}，每批 ${batchSize} 条，间隔 ${pauseSeconds} 秒`);
-
-          const totalBatches = Math.ceil(totalItems / batchSize);
-          let lastResult = null;
-
-          for (let batchNo = 1; batchNo <= totalBatches; batchNo += 1) {
-            await waitIfPaused();
-            const start = (batchNo - 1) * batchSize + 1;
-            const end = Math.min(batchNo * batchSize, totalItems);
-            const batchRows = parsedRows.slice(start - 1, end);
-            lastResult = await runSingleBatch(
-              basePayload,
-              batchRows,
-              `第 ${batchNo}/${totalBatches} 批，处理范围 ${start}-${end}，`,
-              batchNo,
-              totalBatches,
-              {
-                start,
-                end,
-              },
-              batchNo < totalBatches ? pauseSeconds : 0,
-            );
-          }
-
-          if (lastResult) {
-            showResult(lastResult);
-          }
-          appendLog(`全部批次执行完成，共 ${totalBatches} 批`);
-          setStatus(`/api/runFlow 分批调用完成，共 ${totalBatches} 批。`, 'success');
+          await ensurePreviewRows();
+          await runRows(parsedRows, '正式执行');
+          setStatus('执行完成。', 'success');
         }),
       );
 
@@ -666,11 +774,11 @@
 
         if (isPaused) {
           isPaused = false;
+          updatePauseButton();
+          updateRunState('执行中');
           appendLog('继续执行');
-          setStatus('继续执行中...', '');
           const resolve = resumeResolver;
           resumeResolver = null;
-          updatePauseButton();
           if (resolve) {
             resolve();
           }
@@ -679,8 +787,8 @@
 
         isPaused = true;
         updatePauseButton();
+        updateRunState('已暂停');
         appendLog('已暂停，等待继续');
-        setStatus('已暂停，点击“继续”后执行下一批。', '');
       });
 
       form.addEventListener('submit', (event) => event.preventDefault());

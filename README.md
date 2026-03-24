@@ -112,6 +112,118 @@ Windows 系统的命令行参数长度有限制（约 8191 字符），当文件
 
 ## 🔄 API 接口
 
+### POST /api/import/preview
+
+导入主入口的预览接口。上传 Excel、指定场景后，返回摘要信息和全量 `rows`。
+
+**请求方式**：
+
+- `Content-Type: multipart/form-data`
+- 表单字段：
+  - `file`: Excel 文件，必填
+  - `scene`: 导入场景，必填，当前支持 `supplier-settlement`
+  - `sheetName`: 可选，指定工作表名称
+  - `mode`: 可选，`full` 或 `chunked`
+  - `chunkSize`: 可选，分片大小
+
+**响应格式**：
+
+```typescript
+{
+  scene: string;
+  summary: {
+    orderTotal: number;
+    settlementTotal: number;
+    detailRowTotal: number;
+    worksheetName: string;
+    mode: 'full' | 'chunked';
+    totalItems: number;
+    totalBatches: number;
+  };
+  rows: Array<{
+    orderNumber: string;
+    settlementNumbers: string[];
+  }>;
+  issues?: Array<{
+    rowNo?: number;
+    field?: string;
+    code: string;
+    message: string;
+    level: 'error' | 'warning';
+  }>;
+}
+```
+
+**调用示例**：
+
+```bash
+curl -X POST http://localhost:9009/api/import/preview \
+  -F "file=@/path/to/example.xlsx" \
+  -F "scene=supplier-settlement" \
+  -F "mode=chunked" \
+  -F "chunkSize=20"
+```
+
+### POST /api/import/execute
+
+导入主入口的执行接口。后端负责解析 Excel、组装 runflow 请求、全量或分片执行，并返回批次结果。
+
+**请求方式**：
+
+- `Content-Type: multipart/form-data`
+- 表单字段：
+  - `file`: Excel 文件，必填
+  - `scene`: 导入场景，必填
+  - `runflowConfig`: runflow JSON 字符串，必填
+  - `sheetName`: 可选
+  - `mode`: 可选，`full` 或 `chunked`
+  - `chunkSize`: 可选
+  - `continueOnError`: 可选，`true` 或 `false`
+
+**响应格式**：
+
+```typescript
+{
+  scene: string;
+  data: {
+    summary: {
+      orderTotal: number;
+      settlementTotal: number;
+      detailRowTotal: number;
+      worksheetName: string;
+    }
+  }
+  execution: {
+    mode: 'full' | 'chunked';
+    totalItems: number;
+    totalBatches: number;
+    successBatches: number;
+    failedBatches: number;
+    results: Array<{
+      batchNo: number;
+      start: number;
+      end: number;
+      success: boolean;
+      durationMs: number;
+      responsePayload?: any;
+      errorMessage?: string;
+    }>;
+  }
+}
+```
+
+**调用示例**：
+
+```bash
+curl -X POST http://localhost:9009/api/import/execute \
+  -F "file=@/path/to/example.xlsx" \
+  -F "scene=supplier-settlement" \
+  -F "mode=chunked" \
+  -F "chunkSize=20" \
+  -F "continueOnError=false" \
+  -F 'runflowConfig={"flowKey":"am0xuhyt9p6mfcat","action":"sync_input_supplier_settlement_finance","debug":true}'
+```
+
 ### POST /api/runFlow
 
 ERP 转发服务的核心接口，根据请求参数自动选择目标 API。
@@ -188,11 +300,8 @@ curl -X POST http://localhost:9009/api/excel/parse \
 dev-nest/
 ├── src/
 │   ├── modules/
-│   │   └── erp/              # ERP 转发模块
-│   │       ├── erp.config.ts    # 环境配置
-│   │       ├── erp.service.ts   # 转发服务
-│   │       ├── erp.controller.ts # 控制器
-│   │       └── erp.module.ts    # 模块定义
+│   │   ├── erp/                 # 旧 ERP 兼容接口
+│   │   └── import/              # Excel 导入编排模块
 │   ├── common/               # 公共组件（拦截器等）
 │   ├── app.module.ts         # 应用模块
 │   └── main.ts               # 应用入口
@@ -233,6 +342,15 @@ curl -X POST http://localhost:9009/api/runFlow \
   -H "Content-Type: application/json" \
   -d '{"dataPath": "/path/to/data.json", "hostPre": "https://erp.tintan.net", "host": "erp.tintan.net"}'
 ```
+
+### 场景 3：上传 Excel 并按批调用 runflow
+
+1. 打开工具页 `http://localhost:9009/tools/excel-import.html`
+2. 选择 Excel 文件
+3. 选择 `scene` 和执行模式
+4. 填写 `runflow JSON`
+5. 先点击“解析预览”，确认摘要和批次计划
+6. 再点击“开始执行”，由后端统一编排调用 `runflow`
 
 ## 🛠️ 开发说明
 

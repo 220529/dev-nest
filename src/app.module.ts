@@ -4,6 +4,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { AppController } from '@/app.controller';
 import { ErpModule } from '@/modules/erp/erp.module';
+import { ImportModule } from '@/modules/import/import.module';
 
 @Module({
   imports: [
@@ -13,9 +14,10 @@ import { ErpModule } from '@/modules/erp/erp.module';
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),
-      serveRoot: '/tools/excel',
+      serveRoot: '/tools',
     }),
     ErpModule,
+    ImportModule,
   ],
   controllers: [AppController],
   providers: [],

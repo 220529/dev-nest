@@ -26,7 +26,7 @@ async function bootstrap() {
     console.log(`🌍 环境: ${configSummary.environment.toUpperCase()}`);
     console.log(`🔗 ERP: ${configSummary.baseUrl}`);
     console.log(`📊 服务: http://localhost:${port}`);
-    console.log(`🧰 工具页: http://localhost:${port}/tools/excel`);
+    console.log(`🧰 工具页: http://localhost:${port}/tools/excel-import.html`);
     console.log(
       `🔐 认证: ${configSummary.hasAuthorization ? '✅ 已配置' : '❌ 未配置'}`,
     );

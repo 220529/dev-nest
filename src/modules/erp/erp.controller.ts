@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Post,
@@ -15,6 +14,10 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Express } from 'express';
+import {
+  buildExcelFileInterceptorOptions,
+  EXCEL_FILE_DESCRIPTION,
+} from '@/common/excel-upload';
 import { ErpService, type ParseExcelOptions } from './erp.service';
 
 @ApiTags('ERP')
@@ -33,29 +36,7 @@ export class ErpController {
   }
 
   @Post('excel/parse')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      limits: {
-        fileSize: 10 * 1024 * 1024,
-      },
-      fileFilter: (_request, file, callback) => {
-        const isExcelFile =
-          file.mimetype ===
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-          file.mimetype === 'application/vnd.ms-excel' ||
-          /\.(xlsx|xls|csv)$/i.test(file.originalname);
-
-        if (!isExcelFile) {
-          return callback(
-            new BadRequestException('仅支持上传 Excel 文件'),
-            false,
-          );
-        }
-
-        callback(null, true);
-      },
-    }),
-  )
+  @UseInterceptors(FileInterceptor('file', buildExcelFileInterceptorOptions()))
   @ApiOperation({ summary: '上传并解析 Excel 文件' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -66,7 +47,7 @@ export class ErpController {
         file: {
           type: 'string',
           format: 'binary',
-          description: 'Excel 文件，支持 xlsx/xls/csv',
+          description: EXCEL_FILE_DESCRIPTION,
         },
       },
     },
@@ -91,29 +72,7 @@ export class ErpController {
   }
 
   @Post('excel/save-settlement-data')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      limits: {
-        fileSize: 10 * 1024 * 1024,
-      },
-      fileFilter: (_request, file, callback) => {
-        const isExcelFile =
-          file.mimetype ===
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-          file.mimetype === 'application/vnd.ms-excel' ||
-          /\.(xlsx|xls|csv)$/i.test(file.originalname);
-
-        if (!isExcelFile) {
-          return callback(
-            new BadRequestException('仅支持上传 Excel 文件'),
-            false,
-          );
-        }
-
-        callback(null, true);
-      },
-    }),
-  )
+  @UseInterceptors(FileInterceptor('file', buildExcelFileInterceptorOptions()))
   @ApiOperation({ summary: '上传 Excel 并写入结算测试数据文件' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -124,7 +83,7 @@ export class ErpController {
         file: {
           type: 'string',
           format: 'binary',
-          description: 'Excel 文件，支持 xlsx/xls/csv',
+          description: EXCEL_FILE_DESCRIPTION,
         },
         outputPath: {
           type: 'string',
